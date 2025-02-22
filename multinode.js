@@ -9,8 +9,8 @@ const peer = new Peer(null, {});
 const fs = require("node:fs")
 
 // TODO: The name section of this may become automated.
-const ID1 = ["728f055b-7df4-4a93-b9f7-e084bbecbcaf", "Colorblind"];
-const ID2 = ["948d9f6b-342f-4e32-8496-a5190eb2a3cb", "Blinx"];
+const ID1 = ["aadcc557-706e-4790-8e9b-91a309cce6b3", "Testing Crew"];
+const ID2 = ["0d636b97-7001-402b-a199-a2caa8a769f3", null];
 
 const LEVELS = Object.freeze({
     GARAGE:   "Garage",
@@ -34,7 +34,7 @@ let teams = [];
 let clients = [];
 
 // Connection to the kevingo server.
-wss.on('connection', (ws) => {
+/*wss.on('connection', (ws) => {
 	console.log('New client connected');
 	
 	clients.push(ws);
@@ -55,7 +55,7 @@ wss.on('connection', (ws) => {
       	clients.splice(index, 1);
 		}
 	});
-  });
+  });*/
 
 // TODO: Add return statement of success?
 function BroadcastMessage(message) {
@@ -93,14 +93,37 @@ class Team {
 		this.graffiti = InitTagData();
 		this.players = [];
 	}
+
+	OutputGraffiti() {
+		let grafOutput = {};
+		for (const [name, value] of Object.entries(this.graffiti)) {
+			if (value != null) {
+				grafOutput[value.name] = value.OutputGraffitiInfo()
+			}
+		}
+		return grafOutput;
+	}
+
+	OutputPlayerLocations() {
+		let playerOutput = {};
+		this.players.forEach(player => {
+			if (player.name.length > 0) {
+				playerOutput[player.name] = GetLevelFromID(player.location);
+			}
+		})
+		return playerOutput;
+	}
 }
 
 class Player {
 	name = null;
 	location = null;
+	automarkStatus = false;
 
 	constructor(_name) {
 		this.name = _name;
+		this.location = "Unknown"
+		this.automarkStatus = false;
 	}
 }
 
@@ -150,6 +173,10 @@ class Level {
 		} 
 		return false;
 	}
+
+	OutputGraffitiInfo() {
+		return {"name": this.name, "complete": this.CountGraffiti(), "maximum": this.maxGraffiti, "incompleteList": this.incompleteGraffiti}
+	}
 }
 
 class Graffiti {
@@ -187,9 +214,9 @@ class Graffiti {
 			console.log(`Already have ${tagID} for ${this.location} (ID: ${this.id})`);
 		} else {
 			this.completeTags.push(this.incompleteTags.splice(this.incompleteTags.indexOf(tagID), 1));
-			console.log(`Marked ${tagID} for ${this.location} (ID: ${this.id})`);
+			// console.log(`Marked ${tagID} for ${this.location} (ID: ${this.id})`);
 			if (this.incompleteTags.length == 0) {
-				console.log(`This graffiti is complete!`);
+				console.log(`${this.location} graffiti is complete!`);
 				return true;
 			}
 		}
@@ -217,22 +244,26 @@ peer.on("open", (id) => {
 		let conn2 = peer.connect(ID2[0]);
 		let rightTeam = new Team(conn2, ID2[1]);
 		teams.push(rightTeam);
-	
 		conn2.on("data", (data) => {
 			ParseGameData(JSON.parse(data), rightTeam);
+			//console.log(rightTeam);
 			//conn.send({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0});
 		});
-	}	
+	}
 });
 
 /*peer.on("connection", (dc) => {
 	connections.push(new PlayerConnection(dc));
 	console.log("added new player");
 })*/
-function handlePlayerRegister(jsonData, teamObj) {
-	const playerName = dwsToString(jsonData.dw1, jsonData.dw2, jsonData.dw3);
-	teamObj.players.push(new Player(playerName));
-	console.log(`Set name for player ${jsonData.b}: ${playerName}`);
+function HandlePlayerRegister(playerName, playerIndex, teamObj) {
+	if (playerIndex < teamObj.players.length) {
+		teamObj.players[playerIndex].name = playerName
+		console.log(`Changed name for player ${playerIndex} to ${playerName} on team ${teamObj.name}`);
+	} else {
+		teamObj.players.push(new Player(playerName));
+		console.log(`Added player ${playerName} to team ${teamObj.name} at index ${playerIndex}`);
+	}
 }
 
 /** 
@@ -247,6 +278,7 @@ function ParseGameData(jsonData, teamObj) {
 
     switch (jsonData.cat) {
         case 0:
+			console.log(prefix);
             switch (jsonData.sub) {
                 case 0:
                     console.log(`Connected`);
@@ -261,8 +293,7 @@ function ParseGameData(jsonData, teamObj) {
                     console.log(`Set player index: ${jsonData.b}`);
                     break;
                 case 4:
-					console.log(`Registering player to team ${teamObj.name}`);
-					handlePlayerRegister(jsonData, teamObj) 
+					HandlePlayerRegister(dwsToString(jsonData.dw1, jsonData.dw2, jsonData.dw3), jsonData.b, teamObj) 
                     break;
                 case 5:
                     console.log(`Tickrate set to: ${jsonData.dw1}`);
@@ -290,14 +321,13 @@ function ParseGameData(jsonData, teamObj) {
             }
             break;
         case 2:
+			console.log(prefix);
             switch (jsonData.sub) {
                 case 0:
-					// TODO
                     console.log(`Tag sprayed - Area: ${jsonData.dw1}, Spray: ${jsonData.dw2}, Value: ${jsonData.dw3}`);
                     HandleTagSprayed(jsonData.dw1, jsonData.dw2, jsonData.dw3, jsonData.src, teamObj); // jsonData.b is player index, but I don't know if we need that. Maybe we do.
                     break;
 				case 1:
-					console.log(prefix);
 					HandleSoulCollect(jsonData.dw1 + 1, jsonData.src, teamObj);
 					break;
                 case 2:
@@ -323,7 +353,7 @@ function ParseGameData(jsonData, teamObj) {
         case 3:
             switch (jsonData.sub) {
                 case 0:
-					HandleAreaChange(jsonData.dw1, teamObj);
+					HandleAreaChange(jsonData.dw1, jsonData.src, teamObj);
                     break;
                 case 1:
                     //console.log(`Movement coords - Index: ${jsonData.b}, X: ${jsonData.dw1}, Y: ${jsonData.dw2}, Z: ${jsonData.dw3}`);
@@ -366,7 +396,7 @@ function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 		if (levelObj.MarkGraffitiAsComplete(graffitiObj)) {
 			HandleGraffitiCompletion(levelObj, playerIndex, teamObj)
 		} else {
-			console.log(`Currently at ${levelObj.CountGraffiti()} / ${levelObj.maxGraffiti} in ${levelObj.name}.`);
+			console.log(`${teamObj.name}: Currently at ${levelObj.CountGraffiti()} / ${levelObj.maxGraffiti} in ${levelObj.name}.`);
 		}
 		OutputTeamGraffitiProgress(teamObj);
 	}
@@ -374,12 +404,12 @@ function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 }
 
 function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
-	console.log(`Completed all graffiti for ${levelObj.name}`);
+	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
 	BroadcastMessage(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
 }
 
 function HandleSoulCollect(soulID, playerIndex, teamObj) {
-	console.log(`Player ${teamObj.players[playerIndex].name} picked up soul number ${soulID}`);
+	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} picked up soul number ${soulID}`);
 	BroadcastMessage(JSON.stringify(new BingoEvent("Soul", teamObj.players[playerIndex].name, soulID)))
 	return;
 }
@@ -396,16 +426,21 @@ function HandleSoulUnlock(soulNum, teamObj) {
 }
 
 function HandleCharUnlock(charID, playerIndex, teamObj) {
-	console.log(`[${GetNow()}] Team ${teamObj.players[playerIndex].name} have unlocked character ${GetCharacterFromID(charID)}.`);
+	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} has unlocked character ${GetCharacterFromID(charID)}.`);
 	BroadcastMessage(JSON.stringify(new BingoEvent("Character", teamObj.players[playerIndex].name, GetCharacterFromID(charID))))
 	return;
 }
 
 // Player Tracker?
-function HandleAreaChange(levelID, teamObj) {
-	// TODO: Update index properly.
-	teamObj.players[0].location = levelID;
-	OutputPlayerLocations(teamObj);
+function HandleAreaChange(levelID, playerIndex, teamObj) {
+	if (playerIndex != undefined) 
+	{
+		teamObj.players[playerIndex].location = levelID;
+		console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} has moved to ${GetLevelFromID(levelID)}.`);
+		OutputPlayerLocations(teamObj);
+	} else {
+		console.log("Undefined player SRC");
+	}
 	return;
 }
 
@@ -414,7 +449,7 @@ function HandleKillCombo(teamObj) {
 }
 
 function OutputTeamGraffitiProgress(teamObj) {
-	let outText = JSON.stringify(teamObj.graffiti);
+	let outText = JSON.stringify(teamObj.OutputGraffiti());
 	let outName = teams[0] == teamObj ? "LeftGraffiti.txt" : "RightGraffiti.txt"
 
 	fs.writeFile(outName, outText, err => {
@@ -427,8 +462,9 @@ function OutputTeamGraffitiProgress(teamObj) {
 }
 
 function OutputPlayerLocations(teamObj) {
-	let outText = JSON.stringify(teamObj.players);
+	let outText = JSON.stringify(teamObj.OutputPlayerLocations());
 	let outName = teams[0] == teamObj ? "LeftLocations.txt" : "RightLocations.txt"
+	console.log(outText);
 
 	fs.writeFile(outName, outText, err => {
 		if (err) {
@@ -492,7 +528,7 @@ function GetLevelFromID(levelInt) {
 		case 196611:
 			return LEVELS.HWY0;
 		case 196612:
-			return LEVELS.SDPP;
+			return LEVELS.SKYSCRAPER;
 		default:
 			return "Other/Unknown";
 	}
@@ -790,9 +826,9 @@ function InitTagData() {
 		 [23, "SS", "hill curve 1"],
 		 [24, "M", "hill curve 1"],
 		 [37, "L", "points"],
-		 [25, "SS", "hill curve 2"],
+		 [26, "SS", "hill curve 2"],
 		 [27, "S", "hill curve 2"],
-		 [26, "XL", "hill curve 2"],
+		 [25, "XL", "hill curve 2"],
 		 [28, "S", "hill curve 2"],
 		 [29, "SS", "hill curve 2"],
 		 [7, "M", "hill curve 2"],
@@ -964,6 +1000,10 @@ function InitTagData() {
 		[34, "L", "After Tape 4"],
 		[40, "M", "Platform before tricks soul"],
 		[4, "S", "Tricks soul"],
+		[33, "L", "Tricks soul"],
+		[57, "M", "Wallride with cans"],
+		[6, "S", "Air soul"],
+		[7, "M", "Air soul"],
 	]);
 
 	let RDH = new Level(131072, 
@@ -1063,7 +1103,7 @@ function InitTagData() {
 		[13, "M", "Catwalk near air"],
 		[15, "S", "PJ 1 Blue Rail"],
 		[19, "L", "PJ 1 Catwalk"],
-		[18, "L", "PJ 1 Catwalk"],
+		[18, "M", "PJ 1 Catwalk"],
 		[16, "S", "PJ 1 Catwalk"],
 		[17, "S", "PJ 1 Catwalk"], //CHECK ME?
 		[14, "S", "PJ 1 Orange Rail"],
@@ -1355,8 +1395,22 @@ function InitTagData() {
 		[7, "M", "Medium near entrance highway"]
 	]);
 
-	return {[LEVELS.DOGEN]: dogen, [LEVELS.SHIBUYA]: shibuya, [LEVELS.CHUO]: chuo, [LEVELS.HIKAGE]: hikage,
-			[LEVELS.RDH]: RDH, [LEVELS.SEWERS]: sewers, [LEVELS.KIBO]: kibo, [LEVELS.BOTTOMPOINT]: bottomPoint, [LEVELS.FRZ]: FRZ,
-			[LEVELS.x99TH]: x99th, [LEVELS.SDPP]: SDPP, [LEVELS.SKYDINO]: skyDino, [LEVELS.HWY0]: highwayZero,
-			[LEVELS.STADIUM]: null, [LEVELS.GARAGE]: null};
+	let returnObj = {};
+	returnObj[LEVELS.DOGEN] = dogen;
+	returnObj[LEVELS.SHIBUYA] = shibuya;
+	returnObj[LEVELS.CHUO] = chuo;
+	returnObj[LEVELS.HIKAGE] = hikage;
+	returnObj[LEVELS.RDH] = RDH;
+	returnObj[LEVELS.SEWERS] = sewers;
+	returnObj[LEVELS.KIBO] = kibo;
+	returnObj[LEVELS.BOTTOMPOINT] = bottomPoint;
+	returnObj[LEVELS.FRZ] = FRZ;
+	returnObj[LEVELS.x99TH] = x99th;
+	returnObj[LEVELS.SKYSCRAPER] = SDPP;
+	returnObj[LEVELS.SKYDINO] = skyDino;
+	returnObj[LEVELS.HWY0] = highwayZero;
+	returnObj[LEVELS.STADIUM] = null;
+	returnObj[LEVELS.GARAGE] = null;
+	
+	return returnObj;
 }

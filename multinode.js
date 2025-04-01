@@ -1,16 +1,22 @@
 //80e7a068-8b0f-4d6d-a836-d6d92f253de3
 
 const { json } = require('body-parser');
+//https://jsrfmulti.surge.sh/bingo/?connect=f092bbe0-16c0-4ee4-814f-631f03722f17
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 6969 });
 
 const Peer = require('peerjs-on-node').Peer;
 const peer = new Peer(null, {});
 const fs = require("node:fs")
+/*
+const args = process.argv.slice(2);
+if (args.length !== 2) {
+    console.log("Please provide 2 UUIDs: one for team1 and one for team2");
+    process.exit(1);
+} */
 
 // TODO: The name section of this may become automated.
-const ID1 = ["aadcc557-706e-4790-8e9b-91a309cce6b3", "Testing Crew"];
-const ID2 = ["0d636b97-7001-402b-a199-a2caa8a769f3", null];
+const ID1 = ["f092bbe0-16c0-4ee4-814f-631f03722f17", "JonJon"];
+const ID2 = ["6c7176a1-bcc4-47f5-9baa-4a60f4c2e639", "miku"];
 
 const LEVELS = Object.freeze({
     GARAGE:   "Garage",
@@ -25,7 +31,7 @@ const LEVELS = Object.freeze({
 	SKYDINO: "Sky Dino",
 	RDH: "RDH",
 	SEWERS: "Sewers",
-	BOTTOMPOINT: "Btm Pt.",
+	BOTTOMPOINT: "Btm pt.",
 	KIBO: "Kibo",
 	FRZ: "FRZ"
 });
@@ -34,51 +40,43 @@ let teams = [];
 let clients = [];
 
 // Connection to the kevingo server.
-/*wss.on('connection', (ws) => {
-	console.log('New client connected');
-	
-	clients.push(ws);
-	// Send a welcome message when a client connects
-	// Handle incoming messages from the client
-	ws.on('message', (message) => {
-	  console.log(`Received message: ${message}`);
-  
-	  // Send a response back to the client
-	  ws.send(`Server received: ${message}`);
-	});
-  
-	// Handle client disconnections
-	ws.on('close', () => {
-	  console.log('Client disconnected');
-	  const index = clients.indexOf(ws);
-      if (index > -1) {
-      	clients.splice(index, 1);
-		}
-	});
-  });*/
+socket = new WebSocket("wss://chat.kevcyg.net");
+
+socket.onopen = () => {
+	console.log("Connected to WebSocket server");
+	socket.send(JSON.stringify({ username : "automarker" }));
+};
+
+socket.onclose = (event) => console.log("Disconnected from WebSocket server", event);
+socket.onerror = (error) => console.error("WebSocket error:", error);
 
 // TODO: Add return statement of success?
-function BroadcastMessage(message) {
-	clients.forEach((client) => {
-		if (client.readyState === WebSocket.OPEN) {
-			// console.log(`Sending ${message} to ${client}`);
-			client.send(message);
-		}
-	});
-}
+
 
 class BingoEvent {
-	type = ""; // SOUL, CHARACTER, GRAFFITI
-	playerName = "";
-	id = -1;
-	time = -1;
+    type = ""; // SOUL, CHARACTER, GRAFFITI
+    playerName = "";
+    id = -1;
+    time = -1;
 
-	constructor(_type, _playerName, _id) {
-		this.type = _type;
-		this.playerName = _playerName;
-		this.id = _id;
-		this.time = new Date().valueOf(); // Epoch milliseconds
-	}
+    constructor(_type, _playerName, _id) {
+        this.type = _type;
+        this.playerName = _playerName;
+        this.id = _id;
+        this.time = new Date().valueOf(); // Epoch milliseconds
+    }
+
+    toAutomarker() {
+        return {
+            type: "automark",
+            data: {
+                type: this.type,
+                playerName: this.playerName,
+                id: this.id,
+                time: this.time
+            }
+        }
+    }
 }
 
 class Team {
@@ -264,6 +262,16 @@ function HandlePlayerRegister(playerName, playerIndex, teamObj) {
 		teamObj.players.push(new Player(playerName));
 		console.log(`Added player ${playerName} to team ${teamObj.name} at index ${playerIndex}`);
 	}
+
+	SendPlayerData();
+}
+
+function SendPlayerData() {
+	const players = teams.map(team => team.players).flat();
+	const playerNames = players.filter(player => player.name !== "").map(player => player.name);
+	if (socket && playerName != '') {
+		socket.send(JSON.stringify({type : "set_automark", data : {names : playerNames}}))
+	}
 }
 
 /** 
@@ -405,12 +413,13 @@ function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 
 function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
-	BroadcastMessage(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
+	socket.send(JSON.stringify((new BingoEvent("Graf", teamObj.players[playerIndex].name, levelObj.name)).toAutomarker()))
 }
 
 function HandleSoulCollect(soulID, playerIndex, teamObj) {
+	console.log(teamObj.players[playerIndex]);
 	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} picked up soul number ${soulID}`);
-	BroadcastMessage(JSON.stringify(new BingoEvent("Soul", teamObj.players[playerIndex].name, soulID)))
+	socket.send(JSON.stringify((new BingoEvent("Soul", teamObj.players[playerIndex].name, soulID)).toAutomarker()))
 	return;
 }
 
@@ -427,7 +436,7 @@ function HandleSoulUnlock(soulNum, teamObj) {
 
 function HandleCharUnlock(charID, playerIndex, teamObj) {
 	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} has unlocked character ${GetCharacterFromID(charID)}.`);
-	BroadcastMessage(JSON.stringify(new BingoEvent("Character", teamObj.players[playerIndex].name, GetCharacterFromID(charID))))
+	socket.send(JSON.stringify((new BingoEvent("Char", teamObj.players[playerIndex].name, GetCharacterFromID(charID))).toAutomarker()))
 	return;
 }
 
@@ -440,7 +449,7 @@ function HandleAreaChange(levelID, playerIndex, teamObj) {
 		OutputPlayerLocations(teamObj);
 	} else {
 		console.log("Undefined player SRC");
-	}
+		}
 	return;
 }
 
@@ -570,15 +579,15 @@ function GetTapeFromID(tapeID) {
 function GetCharacterFromID(charID) {
 	switch (charID) {
 		case 10:
-			return `${LEVELS.BOTTOMPOINT} Unlock Cube`;
+			return `Cube`;
 		case 4:
-			return `${LEVELS.RDH} Unlock Rhyth`;
+			return `Rhyth`;
 		case 21:
-			return `${LEVELS.STADIUM} Unlock Jazz`;
+			return `Jazz`;
 		case 5:
-			return `${LEVELS.HWY0} Unlock Soda`;
+			return `Soda`;
 		case 9:
-			return `${LEVELS.KIBO} Unlock Boogie`;
+			return `Boogie`;
 		default:
 			return "Unknown/Error";
 	}
@@ -1105,7 +1114,7 @@ function InitTagData() {
 		[19, "L", "PJ 1 Catwalk"],
 		[18, "M", "PJ 1 Catwalk"],
 		[16, "S", "PJ 1 Catwalk"],
-		[17, "S", "PJ 1 Catwalk"], //CHECK ME?
+		[17, "S", "PJ 1 Catwalk"],
 		[14, "S", "PJ 1 Orange Rail"],
 		[20, "L", "In halfpipe"],
 		[21, "S", "PJ 2 Orange Rail"],

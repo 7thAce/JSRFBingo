@@ -388,7 +388,7 @@ function ParseGameData(jsonData, teamObj) {
 function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 	let levelObj = teamObj.graffiti[GetLevelFromID(levelID)];
 	if (levelObj == null) {
-		console.log("Stadium/Garage sprays are ignored.");1
+		console.log("Stadium/Garage sprays are ignored.");
 		return;
 	}
 

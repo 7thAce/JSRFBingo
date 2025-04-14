@@ -8,8 +8,8 @@ const peer = new Peer(null, {});
 const fs = require("node:fs")
 
 // TODO: The name section of this may become automated or passed via argument.
-const ID1 = ["e077de90-282e-4d0e-af70-e6e8b45c9f89", "The Bingo Wizards"];
-const ID2 = ["92cabda1-ed39-4a9a-bbd1-4d3a85e642ae", "Jon/vaen"];
+const ID1 = ["2f23a215-869e-4640-8880-7aaf70f5db0f", "#BARKATTHEMAILMAN"];
+const ID2 = ["0016b450-7627-47ee-9675-32d903bd9c33", "Fatal Fatale"];
 
 const LEVELS = Object.freeze({
     GARAGE: "Garage",
@@ -284,13 +284,17 @@ peer.on("open", (id) => {
 })*/
 function HandlePlayerRegister(playerName, playerIndex, teamObj) {
 	if (playerIndex < teamObj.players.length) {
-		teamObj.players[playerIndex].name = playerName
-		console.log(`Changed name for player ${playerIndex} to ${playerName} on team ${teamObj.name}`);
+		if (teamObj.players[playerIndex] == null) {
+			teamObj.players[playerIndex] = new Player(playerName);
+			console.log(`Added EXISTING player ${playerName} to team ${teamObj.name} at index ${playerIndex}`);
+		} else {
+			teamObj.players[playerIndex].name = playerName
+			console.log(`Changed name for player ${playerIndex} to ${playerName} on team ${teamObj.name}`);
+		}
 	} else {
 		teamObj.players.push(new Player(playerName));
-		console.log(`Added player ${playerName} to team ${teamObj.name} at index ${playerIndex}`);
+		console.log(`Added NEW player ${playerName} to team ${teamObj.name} at index ${playerIndex}`);
 	}
-
 	
 	const players = teams.map(team => team.players).flat();
 	const playerNames = players.filter(player => player.name !== "").map(player => player.name);
@@ -321,6 +325,7 @@ function ParseGameData(jsonData, teamObj) {
                     break;
                 case 2:
                     console.log(`Player count: ${jsonData.b}`);
+					teamObj.players.length = jsonData.b;
                     break;
                 case 3:
                     console.log(`Set player index: ${jsonData.b}`);
@@ -473,8 +478,8 @@ function HandleCharUnlock(charID, playerIndex, teamObj) {
 function HandleAreaChange(levelID, playerIndex, teamObj) {
 	if (playerIndex != undefined) 
 	{
-		teamObj.players[playerIndex].location = levelID;
-		teamObj.players[playerIndex].enterTimestamp = Date.now();
+		teamObj.players[playerIndex]["location"] = levelID;
+		teamObj.players[playerIndex]["enterTimestamp"] = Date.now();
 		console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} has moved to ${GetLevelFromID(levelID)} at timestamp ${teamObj.players[playerIndex].enterTimestamp}.`);
 
 		// There has to be a better way to make an object inside an object. Right?
@@ -502,7 +507,7 @@ function HandleAreaChange(levelID, playerIndex, teamObj) {
 		//console.log(returnObj);
 		SendToServer("playerloc/set", returnObj);
 	} else {
-		console.log("Undefined player SRC");
+		console.log("Unknown Player Location (they haven't moved)");
 	}
 	return;
 }

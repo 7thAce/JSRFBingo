@@ -8,8 +8,8 @@ const peer = new Peer(null, {});
 const fs = require("node:fs")
 
 // TODO: The name section of this may become automated or passed via argument.
-const ID1 = ["2f23a215-869e-4640-8880-7aaf70f5db0f", "#BARKATTHEMAILMAN"];
-const ID2 = ["0016b450-7627-47ee-9675-32d903bd9c33", "Fatal Fatale"];
+const ID1 = ["ff3091c4-464d-4530-85e2-0bc693bc9785", "#BARKATTHEMAILMAN"];
+const ID2 = ["8e7f08b9-8e8d-41ad-adac-4af6a58c4406", "Wizard Chaos"];
 
 const LEVELS = Object.freeze({
     GARAGE: "Garage",

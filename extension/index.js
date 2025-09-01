@@ -45,6 +45,46 @@ module.exports = function(nodecg) {
         });
     });
 
+    nodecg.listenFor('launch-streamlink-poisonjam', () => {
+        nodecg.log.info("Launching all streamlinks!");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Client error: ${error}`);
+                return;
+            }
+        });
+    });
+
+    nodecg.listenFor('launch-streamlink-loveshockers', () => {
+        nodecg.log.info("Launching all streamlinks!");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Client error: ${error}`);
+                return;
+            }
+        });
+    });
+
+    nodecg.listenFor('launch-streamlink-pots', () => {
+        nodecg.log.info("Launching all streamlinks!");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Client error: ${error}`);
+                return;
+            }
+        });
+    });
+
+    nodecg.listenFor('launch-streamlink-doomriders', () => {
+        nodecg.log.info("Launching all streamlinks!");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Client error: ${error}`);
+                return;
+            }
+        });
+    });
+
     nodecg.listenFor('launch-reader-bingosync', () => {
         nodecg.log.info("Launching Bingosync reader into room ${room_id}!");
         exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
@@ -55,7 +95,7 @@ module.exports = function(nodecg) {
         });
     });
 
-    nodecg.listenFor('launch-reader-bingosync', () => {
+    nodecg.listenFor('launch-reader-kevingo', () => {
         nodecg.log.info("Launching Kevingo reader!");
         exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
             if (error) {

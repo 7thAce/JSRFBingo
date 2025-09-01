@@ -1,0 +1,173 @@
+:root {
+    --input-color: #222222;
+    --input-border: #CDD9ED;
+    --input-background: #fff;
+    --input-placeholder: #95989e;
+
+    --input-border-focus: #275EFE;
+
+    --group-color: var(--input-color);
+    --group-border: var(--input-border);
+    --group-background: #EEF4FF;
+
+    --group-color-focus: #fff;
+    --group-border-focus: var(--input-border-focus);
+    --group-background-focus: #141d36;
+}
+
+
+html, body {
+    height: 100%;
+}
+
+.panel {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-row {
+    display: flex;
+    width: 100%;
+    height: 50%;
+}
+
+#gameInfo {
+    width: 50%;
+    height: 100%;
+    background-color: #8B0000; /* dark red */
+}
+
+#connectionsStatus {
+    width: 50%;
+    height: 100%;
+    background-color: #8a4c00; /* dark orange */
+}
+
+/* #connectionsTable {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse; 
+} */
+
+#connetionsStatus th, #connectionsStatus td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+    width: 25%;
+    height: 20%;
+}
+
+#connectionsTable .connected {
+    border-color: #00FF00; /* bright green */
+}
+
+#connectionsTable .disconnected {
+    border-color: #FF0000; /* bright red */
+}
+
+#gameState {
+    width: 45%;
+    height: 100%;
+    background-color: #006400; /* dark green */
+}
+
+#chat {
+    width: 25%;
+    height: 100%;
+    background-color: #00008B; /* dark blue */
+}
+
+#gameControls {
+    width: 30%;
+    height: 100%;
+    background-color: #9400D3; /* dark violet */
+}
+
+.teamInfo {
+    padding: 10px;
+    color: white;
+    width: 50%;
+    height: 100%;
+    background-color: darkred;
+}
+
+#leftTeamInfo {
+    background-color: #FFAAFF;
+}
+
+#rightTeamInfo {
+    background-color: #678EFE;
+}
+
+
+.form-field {
+    display: block;
+    width: 100%;
+    padding: 6px 16px;
+    line-height: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: 6px;
+    color: var(--input-color);
+    border: 1px solid var(--input-border);
+    background: var(--input-background);
+    transition: border .3s ease;
+    &::placeholder {
+        color: var(--input-placeholder);
+    }
+    &:focus {
+        outline: none;
+        border-color: var(--input-border-focus);
+    }
+}
+
+.form-group {
+    position: relative;
+    display: flex;
+    width: 100%;
+    padding-bottom: 4px;
+    & > span,
+    .form-field {
+        white-space: nowrap;
+        display: block;
+        &:not(:first-child):not(:last-child) {
+            border-radius: 0;
+        }
+        &:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        &:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        &:not(:first-child) {
+            margin-left: -1px;
+        }
+    }
+    .form-field {
+        position: relative;
+        z-index: 1;
+        flex: 1 1 auto;
+        width: 1%;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    & > span {
+        text-align: center;
+        padding: 9px 12px;
+        font-size: 14px;
+        line-height: 10px;
+        color: var(--group-color);
+        background: var(--group-background);
+        border: 1px solid var(--group-border);
+        transition: background .3s ease, border .3s ease, color .3s ease;
+    }
+    &:focus-within {
+        & > span {
+            color: var(--group-color-focus);
+            background: var(--group-background-focus);
+            border-color: var(--group-border-focus);
+        }
+    }
+}

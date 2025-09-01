@@ -2,6 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
+		<link rel="stylesheet" href="wizards-tome.css">
 		<style>
 			.monospace {
 				font-family: monospace;
@@ -9,6 +10,79 @@
 		</style>
 	</head>
 	<body>
+		<!-- Five main sections: Game info, Statuses, Game State, Chat, and Game Controls -->
+		<div class="panel-row">
+			<div id="gameInfo" class="panel-row">
+				<div id="leftTeamInfo" class="teamInfo">
+					Left Team Information
+					<div class="form-group"><span>Name</span><input id="leftTeamName"		class="form-field" type="text" placeholder="Team Name"></div>
+					<div class="form-group"><span>Web Color</span><input id="leftInColor"		class="form-field" type="text" placeholder="Website Color"></div>
+					<div class="form-group"><span>Out Color</span><input id="leftOutColor"		class="form-field" type="text" placeholder="Display Color"></div>
+					<div class="form-group"><span>Multi</span><input id="leftMultilink"		class="form-field" type="text" placeholder="Multi Link"></div>
+					<br>Top Player
+					<div class="form-group"><span>Name</span><input id="topLeftName"		class="form-field" type="text" placeholder="Top Left Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="topLeftPronouns"	class="form-field" type="text" placeholder="Top Left Pronouns"></div>
+					<br>Bottom Player
+					<div class="form-group"><span>Name</span><input id="bottomLeftName"		class="form-field" type="text" placeholder="Bottom Left Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="bottomLeftPronouns"	class="form-field" type="text" placeholder="Bottom Left Pronouns"></div>
+				</div>
+				<div id="rightTeamInfo" class="teamInfo">
+					Right Team Information
+					<div class="form-group"><span>Name</span><input id="rightTeamName"		class="form-field" type="text" placeholder="Team Name"></div>
+					<div class="form-group"><span>Web Color</span><input id="rightInColor"		class="form-field" type="text" placeholder="Website Color"></div>
+					<div class="form-group"><span>Out Color</span><input id="rightOutColor"		class="form-field" type="text" placeholder="Display Color"></div>
+					<div class="form-group"><span>Multi</span><input id="rightMultilink"		class="form-field" type="text" placeholder="Multi Link"></div>
+					<br>Top Player
+					<div class="form-group"><span>Name</span><input id="topRightName"		class="form-field" type="text" placeholder="Top Right Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="topRightPronouns"	class="form-field" type="text" placeholder="Top Right Pronouns"></div>
+					<br>Bottom Player
+					<div class="form-group"><span>Name</span><input id="bottomRightName"		class="form-field" type="text" placeholder="Bottom Right Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="bottomRightPronouns"	class="form-field" type="text" placeholder="Bottom Right Pronouns"></div>
+				</div>
+			</div>
+
+
+			<div id="connectionsStatus" class="panel">
+				<table id="connectionsTable">
+					<tr>
+						<td>Bingo Connection Status...</td>
+						<td>Multinode</td>
+						<td>Automarker</td>
+						<td>Streamlink</td>
+					</tr>
+					<tr>
+						<td>Top Left</td>
+						<td class="connected">✔</td>
+						<td class="connected">✔</td>
+						<td><button id="launchStreamlinkTL">Launch TL</button></td>
+					</tr>
+					<tr>
+						<td>Bottom Left</td>
+						<td class="disconnected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkBL">Launch BL</button></td>
+					</tr>
+					<tr>
+						<td>Top Right</td>
+						<td class="disconnected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkTR">Launch TR</button></td>
+					</tr>
+					<tr>
+						<td>Bottom Right</td>
+						<td class="connected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkBR">Launch BR</button></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+		<div class="panel-row">
+			<div id="gameState" class="panel"></div>
+			<div id="chat" class="panel"></div>
+			<div id="gameControls" class="panel"></div>
+		</div>
 		<button id="launchServerButton" onclick="launchServer()">Launch Server</button>
 		<button id="launchClientButton" onclick="launchClient()">Launch Client</button>
 		<script src="./wizards-tome.js"></script>

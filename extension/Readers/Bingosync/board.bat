@@ -1,0 +1,2 @@
+node Bingosync_Reader.js
+pause

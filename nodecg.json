@@ -1,0 +1,16 @@
+{
+  "name": "jsrf-bingo-s-8",
+  "version": "1.0.0",
+  "description": "JSRF Bingo overlay system",
+  "author": "7thAce",
+  "license": "MIT",
+  "extension": [
+    "extension/launcher.js"
+  ],
+  "dashboardPanels": [
+    {
+      "name": "Wizard's Tome",
+      "file": "dashboard/wizards-tome.html"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+streamlink --title VLC-PotsTL --twitch-disable-ads "--twitch-api-header=Authorization=OAuth 6vk4o9arvcymk7el1b1qfemgdyl6q2" twitch.tv/jsrfbingopots best --twitch-low-latency

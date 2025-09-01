@@ -1,0 +1,1 @@
+streamlink --title VLC-LoveShockersBR --twitch-disable-ads "--twitch-api-header=Authorization=OAuth 6vk4o9arvcymk7el1b1qfemgdyl6q2" twitch.tv/jsrfbingoloveshockers best --twitch-low-latency

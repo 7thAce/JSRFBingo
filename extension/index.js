@@ -104,5 +104,4 @@ module.exports = function(nodecg) {
             }
         });
     });
-    // Add more listeners for other launch commands as needed
 };

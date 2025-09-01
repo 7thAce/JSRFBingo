@@ -1,0 +1,56 @@
+{
+  "name": "jsrf-bingo-s-8",
+  "version": "0.0.0",
+  "description": "JSRF Bingo Wizarding Spire from where all tech flows",
+  "homepage": "https://jsrf.bingo",
+  "author": {
+    "name": "7thAce",
+    "email": "7thAce@gmail.com",
+    "url": "https://jsrf.bingo"
+  },
+  "files": [
+    "dashboard",
+    "graphics",
+    "extension.js",
+    "extension"
+  ],
+  "keywords": [
+    "7thAce",
+    "jsrf",
+    "bingo",
+    "nodecg-bundle"
+  ],
+  "nodecg": {
+    "compatibleRange": "^2.0.0",
+    "dashboardPanels": [
+      {
+        "name": "wizards-tome",
+        "title": "Wizards Tome",
+        "file": "wizards-tome.html",
+        "fullbleed": true,
+        "headerColor": "#48AFB3"
+      }
+    ],
+    "graphics": [
+      {
+        "file": "bingo.html",
+        "width": 1920,
+        "height": 1080,
+        "singleInstance": false
+      }
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "license": "MIT"
+}

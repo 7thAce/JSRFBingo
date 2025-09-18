@@ -1,0 +1,36 @@
+{
+    "players": {"7thAce": {"name": "7thAce", "pronouns": "she/her"},
+                "Kev360": {"name": "Kev360", "pronouns": "he/him"},
+                "Acebats": {"name": "Acebats", "pronouns": "he/him"},
+                "SylvieT": {"name": "SylvieT", "pronouns": "she/her"},
+                "callmejon": {"name": "callmejon", "pronouns": "he/him"},
+                "Yayo": {"name": "YayodelaRiva", "pronouns": "he/him"},
+                "yomsa": {"name": "yomsa", "pronouns": "she/her"},
+                "vaen": {"name": "vaen", "pronouns": "she/they"},
+                "daft7": {"name": "daft7", "pronouns": "he/him"},
+                "Miku_ds": {"name": "Miku_ds", "pronouns": "he/him"},
+                "nago": {"name": "nago", "pronouns": "she/they"},
+                "shovelclaws": {"name": "shovelclaws", "pronouns": "it/its"},
+                "nae": {"name": "Naestrinus", "pronouns": "any/all"},
+                "lohsa": {"name": "lohsa", "pronouns": "he/him"},
+                "misc": {"name": "misc", "pronouns": "he/him"},
+                "Fatalr0ck": {"name": "Fatalr0ck", "pronouns": "he/him"}
+    },
+    "teams": {
+        "season6": {"Blazor Stans": {"name": "Blazor Stans", "members": ["7thAce", "Kev360"], "bingosyncColor": "green", "displayColor": "#1EA10A", "acronym": "BLZR"},
+                    "Team Hypebeasts": {"name": "Team Hypebeasts", "members": ["callmejon", "Yayo"], "bingosyncColor": "brown", "displayColor": "#743B23", "acronym": "HB"},
+                    "BunDig": {"name": "BunDig", "members": ["yomsa", "vaen"], "bingosyncColor": "pink", "displayColor": "#FBAED2", "acronym": "BUNY"},
+                    "Unhandled Exception":{"name": "Unhandled Exception", "members": ["daft7", "Miku_ds"], "bingosyncColor": "navy", "displayColor": "#002796", "acronym": "EXE"},
+                    "The Nyakuza": {"name": "The Nyakuza", "members": ["Acebats", "SylvieT"], "bingosyncColor": "purple", "displayColor": "#680BAA", "acronym": "NYAK"},
+                    "The Unwantables": {"name": "The Unwantables", "members": ["nago", "shovelclaws"], "bingosyncColor": "red", "displayColor": "#D91D1D", "acronym": "WANT"},
+                    "rollberblades": {"name": "rollberblades", "members": ["nae", "lohsa"], "bingosyncColor": "blue", "displayColor": "#BDBDF9", "acronym": "RBB"},
+                    "Cyberfunk 2066": {"name": "Cyberfunk 2066", "members": ["7thAce", "vaen"], "bingosyncColor": "orange", "displayColor": "#FF9B31", "acronym": "CF66"}
+        },
+        "season7": {"#BARKATTHEMAILMAN": {"name": "#BARKATTHEMAILMAN", "members": ["vaen", "shovelclaws"], "bingosyncColor": "purple", "displayColor": "#AF85FF", "acronym": "BARK"},
+                    "rollberblades": {"name": "rollberblades", "members": ["nae", "lohsa"], "bingosyncColor": "pink", "displayColor": "#FF004F", "acronym": "RBB"},
+                    "DJ": {"name": "DJ", "members": ["nago", "Miku_ds"], "bingosyncColor": "navy", "displayColor": "#022C77", "acronym": "DJ"},
+                    "Team Puma": {"name": "Team Puma", "members": ["callmejon", "misc"], "bingosyncColor": "blue", "displayColor": "#46C2EB", "acronym": "PUMA"},
+                    "Fatal Fatale": {"name": "Fatal Fatale", "members": ["7thAce", "Fatalr0ck"], "bingosyncColor": "green", "displayColor": "#1EA10A", "acronym": "FTL"}
+        }
+    }
+}

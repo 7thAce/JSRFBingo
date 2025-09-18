@@ -2,6 +2,28 @@
 // Or just `nodecg` for short. Like this!:
 nodecg.log.info("Wizard's Tome panel script running!");
 console.log("Wizard's Tome panel script running!");
+const WS_SOURCE = "Dashboard"
+const websocket = new WebSocket("ws://localhost:7135");
+
+websocket.onopen = () => {
+    console.log("Connected to WebSocket server.");
+    websocket.send("connect", "Connected");
+};
+
+websocket.onclose = () => {
+    console.log("Disconnected from WebSocket server.");
+};
+
+const originalWebSocketSend = WebSocket.prototype.send;
+WebSocket.prototype.send = function (type, message) {
+    wsSend = {
+        "source": WS_SOURCE,
+        "timestamp": Date.now(),
+        "type": type,
+        "message": message,
+    }
+    originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
+};
 
 function launchServer() {
     console.log("Launching server...");

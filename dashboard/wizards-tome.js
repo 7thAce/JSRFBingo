@@ -5,6 +5,8 @@ console.log("Wizard's Tome panel script running!");
 const WS_SOURCE = "Dashboard"
 const websocket = new WebSocket("ws://localhost:7135");
 
+const teamsRep = nodecg.Replicant("teams", {defaultValue: {}, persistent: true});
+
 websocket.onopen = () => {
     console.log("Connected to WebSocket server.");
     websocket.send("connect", "Connected");
@@ -32,7 +34,7 @@ function launchServer() {
 
 function launchClient() {
     console.log("Launching client...");
-    nodecg.sendMessage('launch-client');
+    nodecg.sendMessage('launch-reader-kevingo');
 }
 
 function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000") {

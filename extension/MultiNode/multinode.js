@@ -11,6 +11,9 @@ const fs = require("node:fs")
 const ID1 = ["79acb64d-32ae-4c37-bcc9-61056ddb1a09", "Ace Testing"];
 const ID2 = ["66d17135-5b76-4f45-a6cd-cd5ba8b019e0", null];
 
+const args = process.argv.slice(2)
+console.log(args);
+
 const LEVELS = Object.freeze({
     GARAGE: "Garage",
     DOGEN: "Dogen",

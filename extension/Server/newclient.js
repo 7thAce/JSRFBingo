@@ -3,7 +3,7 @@ const WebSocket = require('ws');
 const ws = new WebSocket('ws://localhost:7135');
 
 ws.on('open', () => {
-    ws.send('Hi!');
+    ws.send(JSON.stringify({"source": "NewClient", "type": "connect", "message": "Hi from a client!"}));
 });
 
 ws.on('message', (data) => {

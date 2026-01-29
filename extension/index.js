@@ -43,6 +43,7 @@ ws_read.on('connection', function connection(ws) {
             handleMessage(jsonMessage);
         } catch (e) { 
             console.log("Invalid JSON received (from onMessage).");
+            console.log(message);
         }
     });
 
@@ -226,6 +227,9 @@ function handleMessage(message) {
             console.log("Received team data update (from dashboard).");
             handleTeamDataUpdate(message);
             return;
+        case "kill_combo":
+            handleKillCombo(message["message"]);
+            return;
         default:
             console.log(`!! Received unhandled message type ${message["type"]}.`);
             return;
@@ -265,8 +269,7 @@ function handlePlayerLocationChange(playerData) {
 }
 
 function handleGraffitiSprayed(graffitiData) {
-    let gameEvent = new GameEvent(EVENT_TYPES.SPRAY_GRAFFITI, graffitiData);
-    currentBingoGame.events.push(gameEvent);
+
     // how do we handle 
     return;
 }
@@ -288,28 +291,34 @@ function handleCharacterUnlock(characterData) {
 }
 
 function handleTeamDataUpdate(message) {
-    // player data is stored in the Wizard's Tome, so we just pass the values here and know they've been indexed.
-    example_data = {"data": {
+    example_data = {"teams": {
         "leftTeam": {
-            "name": "Team A",
-            "players": ["Player 1", "Player 2"],
-            "pronouns": ["they/them", "she/her"],
-            "inputColor": "#FF0000",
-            "outputColor": "#880000",
-            "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
+            "display_data": {
+                "name": "Team A",
+                "players": ["Player 1", "Player 2"],
+                "inputColor": "#FF0000",
+                "outputColor": "#880000",
+                "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
+            }
         },
         "rightTeam": {
-            "name": "Team B",
-            "players": ["Player 3", "Player 4"], 
-            "pronouns": ["he/him", "they/them"],
-            "inputColor": "#0000FF",
-            "outputColor": "#000088",
-            "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
+            "display_data": {
+                "name": "Team B",
+                "players": ["Player 3", "Player 4"], 
+                "inputColor": "#0000FF",
+                "outputColor": "#000088",
+                "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
+            }
         },
     }};
 
-    leftTeamData = message["message"]["teams"]["leftTeam"];
-    rightTeamData = message["message"]["teams"]["rightTeam"];
+    leftTeamData["display_data"] = message["message"]["teams"]["leftTeam"]["display_data"];
+    rightTeamData["display_data"] = message["message"]["teams"]["rightTeam"]["display_data"];
+    // this preserves all of the other game data that will exist like locations, graf, etc.
+}
+
+function handleKillCombo(message) {
+    return;
 }
 
 function archiveCurrentGame() {

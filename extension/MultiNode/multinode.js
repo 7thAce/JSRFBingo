@@ -5,14 +5,17 @@ const wss = new WebSocket.Server({ port: 6969 });
 
 const Peer = require('peerjs-on-node').Peer;
 const peer = new Peer(null, {});
-const fs = require("node:fs")
+const fs = require("node:fs");
+const { message } = require('git-rev-sync');
+
 
 // TODO: The name section of this may become automated or passed via argument.
-const ID1 = ["79acb64d-32ae-4c37-bcc9-61056ddb1a09", "Ace Testing"];
-const ID2 = ["66d17135-5b76-4f45-a6cd-cd5ba8b019e0", null];
+const ID1 = ["69ef2953-303f-4096-a867-96b3b94c8925", "7thAce"];
+const ID2 = ["f4228f57-2905-42a7-a917-d241e1787d24", null];
+const WS_SOURCE = "Multinode";
 
-const args = process.argv.slice(2)
-console.log(args);
+// const args = process.argv.slice(2)
+// console.log(args);
 
 const LEVELS = Object.freeze({
     GARAGE: "Garage",
@@ -38,25 +41,24 @@ let clients = [];
 console.log("-- NodeCG version boot.");
 
 // Connection to the kevingo server.
-socket = new WebSocket("wss://chat.kevcyg.net");
+kevingoSocket = new WebSocket("wss://chat.kevcyg.net");
+nodecgServer = new WebSocket('ws://localhost:7135');
 
-socket.onopen = () => {
+kevingoSocket.onopen = () => {
 	console.log("Connected to WebSocket server");
-	socket.send(JSON.stringify({ username : "automarker" }));
+	kevingoSocket.send(JSON.stringify({ username : "automarker" }));
 };
 
-socket.onclose = (event) => console.log("Disconnected from WebSocket server", event);
-socket.onerror = (error) => console.error("WebSocket error:", error);
+kevingoSocket.onclose = (event) => console.log("Disconnected from WebSocket server", event);
+kevingoSocket.onerror = (error) => console.error("WebSocket error:", error);
 
-function SendToServer(target, jsonMessage) {
-	//console.log(`TO: ${target}: ${JSON.stringify(jsonMessage)}`);
-	let a = "";
-	axios
-		.post("http://localhost:3000/" + target, jsonMessage, "application/json")
-		.then((response) => a = response.data)
-		.catch((error) => console.error(error));
-		
+nodecgServer.onopen = () => {
+	SendToNodeCG("connect", "Connected");
 }
+
+// I THINK THIS IS ALL WE HAVE TO UPDATE
+// SEND IT TO THE NEW SERVER VIA NODECG AND STORE INFO THERE
+// JUST GOTTA FIGURE OUT WHAT TO STORE
 
 class BingoEvent {
 	type = ""; // SOUL, CHARACTER, GRAFFITI
@@ -86,14 +88,14 @@ class BingoEvent {
 
 class Team {
 	conn = null;
-	name = "";
+	surgeID = "";
 	graffiti = InitTagData();
 	players = [];
 	tapes = [];
 
-	constructor(_connection, _name) {
+	constructor(_connection, _surgeID) {
 		this.conn = _connection;
-		this.name = _name;
+		this.surgeID = _surgeID;
 		this.graffiti = InitTagData();
 		this.players = [];
 	}
@@ -107,6 +109,7 @@ class Team {
 		}
 		let returnDict = {}
 		returnDict[this.name] = grafOutput;
+		returnDict["teamID"] = this.surgeID;
 		return returnDict;
 	}
 
@@ -120,6 +123,7 @@ class Team {
 		}
 		let returnDict = {}
 		returnDict[this.name] = grafOutput;
+		returnDict["teamID"] = this.surgeID;
 		return returnDict;
 	}
 
@@ -130,12 +134,14 @@ class Team {
 				playerOutput[player.name] = GetLevelFromID(player.location);
 			}
 		})
+		playerOutput["teamID"] = this.surgeID;
 		return playerOutput;
 	}
 
 	OutputTeamTapes() {
 		let tapeOutput = {};
 		tapeOutput[this.name] = this.tapes;
+		tapeOutput["teamID"] = this.surgeID;
 		return tapeOutput;
 	}
 }
@@ -257,9 +263,9 @@ class Graffiti {
 
 
 peer.on("open", (id) => {
-	console.log("Attempting connections...");
-	let conn1 = peer.connect(ID1[0]);
-	let leftTeam = new Team(conn1, ID1[1]);
+	console.log(`Attempting connection to ${ID1[0]}...`);
+	let conn1 = peer.connect(ID1[0]); // ID1[0] is the surge code which we're going to use to identify everything so index has it.
+	let leftTeam = new Team(conn1, ID1[0]);
 	teams.push(leftTeam);
 	
 	//conn1.send(JSON.stringify({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0}));
@@ -273,7 +279,7 @@ peer.on("open", (id) => {
 	
 	if (ID2[1] != null) {
 		let conn2 = peer.connect(ID2[0]);
-		let rightTeam = new Team(conn2, ID2[1]);
+		let rightTeam = new Team(conn2, ID2[0]);
 		teams.push(rightTeam);
 		conn2.on("data", (data) => {
 			ParseGameData(JSON.parse(data), rightTeam);
@@ -303,8 +309,8 @@ function HandlePlayerRegister(playerName, playerIndex, teamObj) {
 	
 	const players = teams.map(team => team.players).flat();
 	const playerNames = players.filter(player => player.name !== "").map(player => player.name);
-	if (socket && playerName != '') {
-		socket.send(JSON.stringify({type : "set_automark", data : {names : playerNames}}));
+	if (kevingoSocket && playerName != '') {
+		kevingoSocket.send(JSON.stringify({type : "set_automark", data : {names : playerNames}}));
 	}
 }
 
@@ -439,31 +445,31 @@ function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 		if (levelObj.MarkGraffitiAsComplete(graffitiObj)) {
 			// Level Complete
 			HandleGraffitiCompletion(levelObj, playerIndex, teamObj);
-			socket.send(JSON.stringify((new BingoEvent("Graf", teamObj.players[playerIndex].name, levelObj.name)).toAutomarker()))
+			kevingoSocket.send(JSON.stringify((new BingoEvent("Graf", teamObj.players[playerIndex].name, levelObj.name)).toAutomarker()))
 		} else {
 			// Level incomplete, but tag is complete
 			console.log(`${teamObj.name}: Currently at ${levelObj.CountGraffiti()} / ${levelObj.maxGraffiti} in ${levelObj.name}.`);
 		}
-		SendToServer("graffiti/set", teamObj.OutputAbbreviatedGraffiti());
+		SendToNodeCG("graffiti_sprayed", teamObj.OutputAbbreviatedGraffiti());
 	}
 	return;
 }
 
 function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
-	socket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
+	kevingoSocket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
 }
 
 function HandleSoulCollect(soulID, playerIndex, teamObj) {
 	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} picked up soul number ${soulID} (${GetSoulInfoFromNumber(soulID)["name"]})`);
-	socket.send(JSON.stringify((new BingoEvent("Soul", teamObj.players[playerIndex].name, soulID)).toAutomarker()))
+	kevingoSocket.send(JSON.stringify((new BingoEvent("Soul", teamObj.players[playerIndex].name, soulID)).toAutomarker()))
 	return;
 }
 
 function HandleTapeCollect(tapeID, teamObj) {
 	console.log(`[${GetNow()}] Team ${teamObj.name} have collected the ${GetTapeFromID(tapeID)} tape.`);
 	teamObj.tapes.push(GetTapeFromID(tapeID));
-	SendToServer("mysterytape/set", teamObj.OutputTeamTapes());
+	SendToNodeCG("tape_collected", teamObj.OutputTeamTapes());
 	return;
 }
 
@@ -475,7 +481,7 @@ function HandleSoulUnlock(soulNum, teamObj) {
 
 function HandleCharUnlock(charID, playerIndex, teamObj) {
 	console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} has unlocked character ${GetCharacterFromID(charID)}.`);
-	socket.send(JSON.stringify((new BingoEvent("Char", teamObj.players[playerIndex].name, GetCharacterFromID(charID))).toAutomarker()))
+	kevingoSocket.send(JSON.stringify((new BingoEvent("Char", teamObj.players[playerIndex].name, GetCharacterFromID(charID))).toAutomarker()))
 	return;
 }
 
@@ -508,9 +514,9 @@ function HandleAreaChange(levelID, playerIndex, teamObj) {
 		playerObj["location"] = GetLevelFromID(levelID);
 		playerObj["enterTimestamp"] = Date.now();
 		locationObj[teamObj.players[playerIndex].name] = playerObj;
-		returnObj[teamObj.name] = locationObj; 	
+		returnObj[teamObj.surgeID] = locationObj; 	
 		//console.log(returnObj);
-		SendToServer("playerloc/set", returnObj);
+		SendToNodeCG("player_location_change", returnObj);
 	} else {
 		console.log("Unknown Player Location (they haven't moved)");
 	}
@@ -520,13 +526,28 @@ function HandleAreaChange(levelID, playerIndex, teamObj) {
 function HandleKillCombo(teamObj) {
 	teamObj.graffiti = InitTagData();
 	teamObj.tapes = [];
-	SendToServer("graffiti/set", teamObj.OutputAbbreviatedGraffiti());
-	SendToServer("mysterytape/set", teamObj.OutputTeamTapes());
+	SendToNodeCG("kill_combo", teamObj.surgeID);
+	// SendToNodeCG("graffiti/set", teamObj.OutputAbbreviatedGraffiti());
+	// SendToNodeCG("mysterytape/set", teamObj.OutputTeamTapes());
 }
 
 /*
 Helper/Data functions.
 */
+
+// const originalWebSocketSend = WebSocket.prototype.send;
+// WebSocket.prototype.send = function (type, message) {
+//     if (typeof message !== 'string') {
+//         message = JSON.stringify(message);
+//     }
+//     wsSend = {
+//         "source": WS_SOURCE,
+//         "timestamp": Date.now(),
+//         "type": type,
+//         "message": message,
+//     }
+//     originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
+// };
 
 function GetNow() {
 	let rightNow = new Date();
@@ -544,6 +565,19 @@ function dwsToString(dw1, dw2, dw3) {
     }
     let allBytes = [...dwToBytes(dw1), ...dwToBytes(dw2), ...dwToBytes(dw3)];
     return String.fromCharCode(...allBytes.filter(b => b !== 0));
+}
+
+function SendToNodeCG(type, message) {
+    if (typeof message !== 'string') {
+        message = JSON.stringify(message);
+    }
+    wsSend = {
+        "source": WS_SOURCE,
+        "timestamp": Date.now(),
+        "type": type,
+        "message": message,
+    }
+	nodecgServer.send(JSON.stringify(wsSend));
 }
 
 function GetLevelFromID(levelInt) {
@@ -1463,3 +1497,7 @@ function InitTagData() {
 	
 	return returnObj;
 }
+
+module.exports = {
+    HandlePlayerRegister, 
+};

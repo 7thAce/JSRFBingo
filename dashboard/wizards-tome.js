@@ -37,6 +37,14 @@ function launchClient() {
     nodecg.sendMessage('launch-reader-kevingo');
 }
 
+function launchAutomarker() {
+    console.log("Launching automarker...");
+    const teamLeftID = document.getElementById("leftMultiLink").value;
+    const teamRightID = document.getElementById("rightMultiLink").value;
+    console.log(`Team Left ID: ${teamLeftID}, Team Right ID: ${teamRightID}`);
+    nodecg.sendMessage('launch-automarker', {"ID1": teamLeftID, "ID2": teamRightID});
+}
+
 function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000") {
     const element = document.getElementById(elementName);
     if (!element) return null;

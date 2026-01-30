@@ -6,6 +6,7 @@ const ws_read = new WebSocket.Server({ port: 7135 });
 const WS_SOURCE = "Server"
 
 const { launchKevingoReader } = require("../../../stuff/KevingoReader.js");
+const { launchAutomarker } = require("./MultiNode/multinode.js");
 
 let currentBingoGame = null;
 let leftTeamData = null;
@@ -22,11 +23,13 @@ function publish(type, message) {
         "type": type,
         "message": message,
     };
-    console.log(` <- [${wsSend["source"]} @ ${formatNow(wsSend["timestamp"])}] ${wsSend["type"]}: ${wsSend["message"]}`);
+    if (type != "ping") {
+        console.log(` <- [${wsSend["source"]} @ ${formatNow(wsSend["timestamp"])}] ${wsSend["type"]}: ${wsSend["message"]}`);
+    }
 
     subscribers.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(message));
+            client.send(JSON.stringify(wsSend));
         }
     });
 }
@@ -85,14 +88,10 @@ module.exports = function(nodecg) {
         });
     });
 
-    nodecg.listenFor('launch-automarker', () => {
-        nodecg.log.info("Launching Automarker with parameters... TODO!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
+    nodecg.listenFor('launch-automarker', (idData) => {
+        nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
+        nodecg.log.info("Launching Automarker with parameters...");
+        launchAutomarker(idData.ID1, idData.ID2);
     });
 
     nodecg.listenFor('launch-streamlink-all', () => {
@@ -240,6 +239,10 @@ function handleMessage(message) {
 
 // Handlers
 
+function handleConnect(message) {
+    return;
+}
+
 function handleNewBoard(boardData) {
     archiveCurrentGame();
     currentBingoGame = new Game(boardData);
@@ -252,7 +255,7 @@ function handleBoardUpdate(boardData) {
 }
 
 function handlePlayerConnect(playerData) {
-    // pull from multinode.js
+    // This will mirror multinode and should 
     return;
 }
 
@@ -337,12 +340,14 @@ function archiveCurrentGame() {
     });
 }
 
-pingTimer = setInterval(ping, 1000);
-
-function ping() {
-    if (subscribers.length == 0) return;
-    publish("ping", "Server Ping");
-}
+(function pingTimer() {
+    setTimeout(() => {
+        if (subscribers.length > 0) {
+            publish("ping", "Server Ping");
+        }
+        pingTimer();
+    }, 1000);
+})();
 
 function getNow() {
     const now = new Date();

@@ -4,7 +4,6 @@ const axios = require('axios');
 const wss = new WebSocket.Server({ port: 6969 });
 
 const Peer = require('peerjs-on-node').Peer;
-const peer = new Peer(null, {});
 const fs = require("node:fs");
 const { message } = require('git-rev-sync');
 
@@ -41,19 +40,55 @@ let clients = [];
 console.log("-- NodeCG version boot.");
 
 // Connection to the kevingo server.
-kevingoSocket = new WebSocket("wss://chat.kevcyg.net");
-nodecgServer = new WebSocket('ws://localhost:7135');
 
-kevingoSocket.onopen = () => {
-	console.log("Connected to WebSocket server");
-	kevingoSocket.send(JSON.stringify({ username : "automarker" }));
-};
 
-kevingoSocket.onclose = (event) => console.log("Disconnected from WebSocket server", event);
-kevingoSocket.onerror = (error) => console.error("WebSocket error:", error);
+function launchAutomarker(leftID, rightID) {
+	console.log(`Received request to launch automarker... with IDs ${leftID} and ${rightID}`);
 
-nodecgServer.onopen = () => {
-	SendToNodeCG("connect", "Connected");
+	kevingoSocket = new WebSocket("wss://chat.kevcyg.net");
+	nodecgServer = new WebSocket('ws://localhost:7135');
+
+	kevingoSocket.onopen = () => {
+		console.log("Connected to Kevingo!");
+		kevingoSocket.send(JSON.stringify({ username : "automarker" }));
+	};
+
+	kevingoSocket.onclose = (event) => console.log("Disconnected from WebSocket server", event);
+	kevingoSocket.onerror = (error) => console.error("WebSocket error:", error);
+
+	nodecgServer.onopen = () => {
+		SendToNodeCG("connect", "Connected");
+	}
+	const peer = new Peer(null, {});
+
+	peer.on("open", () => {
+		console.log(`Attempting connection to ${leftID}...`);
+		let conn1 = peer.connect(leftID); // ID1[0] is the surge code which we're going to use to identify everything so index has it.
+		let leftTeam = new Team(conn1, leftID);
+		teams.push(leftTeam);
+		
+		//conn1.send(JSON.stringify({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0}));
+		//ParseGameData(JSON.parse("{ cat: 2, sub: 0, b: 0, dw1: 131072, dw2: 45, dw3: -229377 }", conn1));
+
+		conn1.on("data", (data) => {
+			ParseGameData(JSON.parse(data), leftTeam);
+			//conn.send({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0});
+		});
+		
+		
+		if (rightID != null && rightID.length > 0) {
+			let conn2 = peer.connect(rightID);
+			let rightTeam = new Team(conn2, rightID);
+			teams.push(rightTeam);
+			conn2.on("data", (data) => {
+				ParseGameData(JSON.parse(data), rightTeam);
+				//console.log(rightTeam);
+				//conn.send({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0});
+			});
+		} else {
+			console.log("No right team ID provided; skipping connection.");
+		}
+	});
 }
 
 // I THINK THIS IS ALL WE HAVE TO UPDATE
@@ -262,32 +297,7 @@ class Graffiti {
 }
 
 
-peer.on("open", (id) => {
-	console.log(`Attempting connection to ${ID1[0]}...`);
-	let conn1 = peer.connect(ID1[0]); // ID1[0] is the surge code which we're going to use to identify everything so index has it.
-	let leftTeam = new Team(conn1, ID1[0]);
-	teams.push(leftTeam);
-	
-	//conn1.send(JSON.stringify({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0}));
-	//ParseGameData(JSON.parse("{ cat: 2, sub: 0, b: 0, dw1: 131072, dw2: 45, dw3: -229377 }", conn1));
 
-	conn1.on("data", (data) => {
-		ParseGameData(JSON.parse(data), leftTeam);
-		//conn.send({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0});
-	});
-	
-	
-	if (ID2[1] != null) {
-		let conn2 = peer.connect(ID2[0]);
-		let rightTeam = new Team(conn2, ID2[0]);
-		teams.push(rightTeam);
-		conn2.on("data", (data) => {
-			ParseGameData(JSON.parse(data), rightTeam);
-			//console.log(rightTeam);
-			//conn.send({"cat":0,"sub":4,"b":0,"dw1":1097364535,"dw2":25955,"dw3":0});
-		});
-	}
-});
 
 /*peer.on("connection", (dc) => {
 	connections.push(new PlayerConnection(dc));
@@ -1499,5 +1509,5 @@ function InitTagData() {
 }
 
 module.exports = {
-    HandlePlayerRegister, 
+    HandlePlayerRegister, launchAutomarker
 };

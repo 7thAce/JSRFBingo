@@ -8,13 +8,50 @@ const WS_SOURCE = "Server"
 const { launchKevingoReader } = require("../../../stuff/KevingoReader.js");
 const { launchAutomarker } = require("./MultiNode/multinode.js");
 
+const GRAFFITIPOINTS = 3;
+const BINGOPOINTS = 2;
+const SQUAREPOINTS = 1;
+
+const LEVELS = Object.freeze({
+    GARAGE: "Garage",
+    DOGEN: "Dogen",
+    SHIBUYA: "Shibuya",
+	CHUO: "Chuo",
+	HIKAGE: "Hikage",
+	x99TH: "99th",
+	SKYSCRAPER: "SDPP",
+	STADIUM: "Stadium",
+	HWY0: "HWY0",
+	SKYDINO: "Sky Dino",
+	RDH: "RDH",
+	SEWERS: "Sewers",
+	BOTTOMPOINT: "Btm pt.",
+	KIBO: "Kibo",
+	FRZ: "FRZ"
+});
+
 let currentBingoGame = null;
 let leftTeamData = null;
 let rightTeamData = null;
 
+shibuyaAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE];
+koganeAreas = [LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ];
+bentenAreas = [LEVELS.x99TH, LEVELS.STADIUM, LEVELS.SKYSCRAPER, LEVELS.SKYDINO, LEVELS.HWY0];
+var allAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE, LEVELS.x99TH, LEVELS.SKYSCRAPER, LEVELS.HWY0, LEVELS.SKYDINO, LEVELS.STADIUM, LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ, LEVELS.GARAGE, LEVELS.STADIUM];
+areasDict = {};
+
+
 let subscribers = [];
 // nodecg.log.info("Websocket started on port 7Ace");
 // nodecg.log.info("Server version 2")
+
+function init() {
+    currentBingoGame = new Game();
+    allAreas.forEach(area => 
+    {
+        areasDict[area] = new LevelMetadata(area);
+    });
+}
 
 function publish(type, message) {
     let wsSend = {
@@ -46,7 +83,7 @@ ws_read.on('connection', function connection(ws) {
             handleMessage(jsonMessage);
         } catch (e) { 
             console.log("Invalid JSON received (from onMessage).");
-            console.log(message);
+            console.log(e);
         }
     });
 
@@ -179,7 +216,6 @@ function handleMessage(message) {
             return;
         case "new_board":
             console.log("Received new board data.");
-            console.log(message["message"]);
             handleNewBoard(message["message"]);
             return;
         case "board_update":
@@ -249,8 +285,7 @@ function handleNewBoard(boardData) {
 }
 
 function handleBoardUpdate(boardData) {
-    // set the board data idk i think it's a full override.
-    // pull from bingo.js
+    setBoardData(boardData);
     return;
 }
 
@@ -272,8 +307,6 @@ function handlePlayerLocationChange(playerData) {
 }
 
 function handleGraffitiSprayed(graffitiData) {
-
-    // how do we handle 
     return;
 }
 
@@ -340,6 +373,37 @@ function archiveCurrentGame() {
     });
 }
 
+/*
+ * The important part here is that we set the entire board state at once.
+ * This allows the page to be refreshed or opened mid-game and still get the full board state immediately.
+ * So, we never handle individual square updates, we just get the whole board every time and update it.
+ * Individual updates are used to set other data though just in case it's used anywhere else (on screen, for example).
+ */ 
+
+// TODO: Check that boarddata is sent the same way. We might have to handle bingosync and kevingo differently.
+function setBoardData(boardData) {
+    // Reset operations
+    for (let team of currentBingoGame.teams) {
+        team.ownedSquares = [];
+    }
+
+    // Parse operations
+    boardJson = JSON.parse(boardData);
+    for (let i = 0; i < boardJson.length; i++) {
+        boardSquare = currentBingoGame.board.getSquareFromIndex(i);
+        boardSquare.AssignPropsFromData(boardJson[i]);
+        areasDict[boardSquare.level].AssignPropsFromSquare(boardSquare);
+
+        for (let team of currentBingoGame.teams) {
+            if (team.inputColor == boardSquare._teamColor) {
+                boardSquare.ownedTeam = team;
+                team.ownedSquares.push(boardSquare);
+            }
+        }
+    }
+    currentBingoGame.board.printBoardState();
+}
+
 (function pingTimer() {
     setTimeout(() => {
         if (subscribers.length > 0) {
@@ -348,6 +412,8 @@ function archiveCurrentGame() {
         pingTimer();
     }, 1000);
 })();
+
+// Utility functions
 
 function getNow() {
     const now = new Date();
@@ -365,6 +431,18 @@ function formatNow(unixTime) {
     const ss = String(now.getSeconds()).padStart(2, '0');
     const iii = String(now.getMilliseconds()).padStart(3, '0');
     return `${hh}:${mm}:${ss}.${iii}`;
+}
+
+function GetAreaFromLevel(level) {
+    if (shibuyaAreas.includes(level)) {
+        return "shibuya";
+    }
+    if (koganeAreas.includes(level)) {
+        return "kogane";
+    }
+    if (bentenAreas.includes(level)) {
+        return "benten";
+    }
 }
 
 const EVENT_TYPES = Object.freeze({
@@ -386,9 +464,28 @@ class GameEvent {
     type = EVENT_TYPES.UNKNOWN;
     data = "";
     timestamp = 0;
+    player = null;
 
     constructor(_type, _data) {
         this.timestamp = Date.now();
+    }
+
+    toDisplayText() {
+        // TODO: Update placeholder texts to include player info.
+        switch (this.type) {
+            case EVENT_TYPES.START:
+                return `Game started! ${this.data}`;
+            case EVENT_TYPES.END:
+                return `Game ended! ${this.data}`;
+            case EVENT_TYPES.PAUSE:
+                return `Game paused. ${this.data}`;
+            case EVENT_TYPES.UNPAUSE:
+                return `Game unpaused. ${this.data}`;
+            case EVENT_TYPES.MARK_SQUARE:
+                return `Square marked: ${this.data}`;
+            case EVENT_TYPES.UNMARK_SQUARE:
+                return `Square unmarked: ${this.data}`;
+        }
     }
 }
 
@@ -407,18 +504,43 @@ class Snipe {
 }
 
 class Board {
-    board = [[0,0,0,0,0],
-             [0,0,0,0,0],
-             [0,0,0,0,0],
-             [0,0,0,0,0],
-             [0,0,0,0,0]];
+    board = null;
 
-    constructor (_boardData) {
+    constructor() {
+        this.board = [[0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0]];
+
+        let i = 0;
+        for (var row = 0; row < 5; row++) {
+            for (var col = 0; col < 5; col++) {
+                this.board[row][col] = new Square(row, col);
+                i++;
+            }
+        }
+    }
+
+    getSquare(row, col) {
+        return this.board[row][col];
+    }
+
+    getSquareFromIndex(index) {
+        const { row, col } = {"row": Math.floor(index / 5), "col": index % 5};
+        return this.getSquare(row, col);
+    }
+
+    printBoardState() {
+        let boardState = "";
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
-                board[row][col] = new Square(row, col);
+                const square = this.board[row][col];
+                boardState += `[${square.text} | ${square.ownedTeam ? square.ownedTeam.name : "None"}] `;
             }
-        }   
+            boardState += "\n";
+        }
+        console.log(boardState);
     }
 }
 
@@ -443,15 +565,16 @@ class Game {
     //     this.regions = [new Region("Shibuya"), new Region("Kogane"), new Region("Benten")] // TODO: not what we want?
     // }
 
-    constructor(_boardData) {
+    constructor() {
         this.bingoCount = 0;
         this.inProgress = false;
         this.events = [];
-        this.gameFeed = ["", "", "Waiting for bingo..."];
+        this.gameFeed = ["", "", "Waiting for bingo..."]; // This will get changed to some default objects.
         this.chatLog = [];
         this.teams = [];
-        this.board = new Board(_boardData);
+        this.board = new Board();
         this.regions = [];
+        console.log("Created new game, waiting for data...");
     }
 }
 
@@ -473,8 +596,7 @@ class Team {
     outputForeColor = "";
 
     // Game Data
-    tapes = [];
-    graffiti = [];
+    levels = [];
     ownedSquares = [];
     score = 0;
     maxScore = 0;
@@ -484,6 +606,10 @@ class Team {
         // todo, set all the stuff.
         // for each player in playerData (player#)
         this.players.push(new Player(_teamData[playerData]));
+        allAreas.forEach(area => 
+        {
+            areasDict[area] = new LevelProgress(area);
+        });
     }
 
 }
@@ -497,7 +623,7 @@ class Player {
     feed = [];
 
     constructor(_playerData) {
-        this.location = new Level(0);
+        {};
     }
 }
 
@@ -514,9 +640,11 @@ class Square {
     prevOwnedTeam = null;
     row = -1;
     col = -1;
+    topText = "";
+    midText = "";
+    botText = "";
 
     constructor(row, col) {
-        // this.$select = jSquare;
         this.row = row;
         this.col = col;
     }
@@ -528,25 +656,97 @@ class Square {
             this.$select.css("background-color", "#111111");
         }
     }
+
+    AssignPropsFromData(squareData) {
+        var squareText = squareData.name;
+        Object.values(LEVELS).forEach(level => {
+            if (squareText.toLowerCase().startsWith(level.toLowerCase())) {
+                this.level = level;
+            }
+        });
+        this.region = GetAreaFromLevel(this.level);
+
+        if (squareText.includes("100%")) {
+            this.value = GRAFFITIPOINTS;
+            this.isGraffiti = true;
+        } else {
+            this.value = SQUAREPOINTS;
+            this.isGraffiti = false;
+        }
+
+        this.text = squareText;
+        this.SetDisplayText(squareText);
+
+        this.isDefault = true;
+        let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Cube", "Rhyth", "Soda", "Jazz"];
+        checkArray.forEach(keyword => {
+            if (this.midText.includes(keyword)) {
+                this.isDefault = false;
+            }
+        });
+
+        // TODO: Are we setting team/color data here? That might be bad if we're not.
+    }
+
+    SetDisplayText(basetext) {
+        if (basetext.includes("-")) {
+            let parts = basetext.split(" - ")[0].split(" ");
+            this.botText = parts.splice(-1)[0];
+            this.topText = parts.join(" ");
+            this.midText = basetext.split(" - ")[1];
+        }
+
+        if (basetext.includes("Unlock")) {
+            let parts = basetext.split(" Unlock ");
+            this.botText = "Char";
+            this.topText = parts[0];
+            this.midText = parts[1];
+        }
+
+        if (basetext.toLowerCase().includes("graffiti")) {
+            let parts = basetext.split(" 100% ")[0].split(" ");
+            this.botText = "Graf";
+            this.topText = parts[0];
+            this.midText = "100% Graffiti";
+        }
+    }
 }
 
-class Level {
+class LevelMetadata {
+    name = "";
+
     hasGraffiti = false;
     squares = [];
-    name = "";
-    id = 0;
     players = [];
     value = 0;
-    tape = false;
 
+    constructor(name) {
+        this.name = name;
+    }
+
+    AssignPropsFromSquare(squareObj) {
+        this.squares.push(squareObj);
+        if (squareObj.isGraffiti) {
+            this.hasGraffiti = true;
+            this.value += GRAFFITIPOINTS;
+        } else {
+            this.value += SQUAREPOINTS;
+        }
+    }
+}
+
+class LevelProgress {
+    graffiti = [];
     incompleteGraffiti = [];
     completeGraffiti = [];
+    name = "";
+    // id = 0;
+    tape = false;
     maxGraffiti = 0;
 
-    constructor (id, graffitiList) {
+    constructor (name, graffitiList) {
+        this.name = name;
         this.incompleteGraffiti = [];
-        this.id = id;
-        this.name = GetLevelFromID(id);
 
         graffitiList.forEach(graffitiInfo => {
             this.incompleteGraffiti.push(new Graffiti(graffitiInfo));
@@ -1576,3 +1776,5 @@ function InitTagData() {
 }
 
 }
+
+init();

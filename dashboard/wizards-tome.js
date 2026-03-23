@@ -16,6 +16,36 @@ websocket.onclose = () => {
     console.log("Disconnected from WebSocket server.");
 };
 
+window.addEventListener('beforeunload', () => {
+    localStorage.setItem('teamDataSave', JSON.stringify(teamsRep.value));
+});
+
+window.addEventListener('load', () => {
+    const savedData = JSON.parse(localStorage.getItem('teamDataSave'));
+    if (savedData) {
+        if (savedData["LeftTeam"]) {
+            document.getElementById("leftTeamName").value = savedData["LeftTeam"]["name"] || "";
+            document.getElementById("topLeftName").value = savedData["LeftTeam"]["player1"]["name"] || "";
+            document.getElementById("topLeftPronouns").value = savedData["LeftTeam"]["player1"]["pronouns"] || "";
+            document.getElementById("bottomLeftName").value = savedData["LeftTeam"]["player2"]["name"] || "";
+            document.getElementById("bottomLeftPronouns").value = savedData["LeftTeam"]["player2"]["pronouns"] || "";
+            document.getElementById("leftInColor").value = savedData["LeftTeam"]["inputColor"] || "#FFFFFF";
+            document.getElementById("leftOutColor").value = savedData["LeftTeam"]["outputColor"] || "#000000";
+            document.getElementById("leftMultiLink").value = savedData["LeftTeam"]["multiLink"] || "";
+        }
+        if (savedData["RightTeam"]) {
+            document.getElementById("rightTeamName").value = savedData["RightTeam"]["name"] || "";
+            document.getElementById("topRightName").value = savedData["RightTeam"]["player1"]["name"] || "";
+            document.getElementById("topRightPronouns").value = savedData["RightTeam"]["player1"]["pronouns"] || "";
+            document.getElementById("bottomRightName").value = savedData["RightTeam"]["player2"]["name"] || "";
+            document.getElementById("bottomRightPronouns").value = savedData["RightTeam"]["player2"]["pronouns"] || "";
+            document.getElementById("rightInColor").value = savedData["RightTeam"]["inputColor"] || "#FFFFFF";
+            document.getElementById("rightOutColor").value = savedData["RightTeam"]["outputColor"] || "#000000";
+            document.getElementById("rightMultiLink").value = savedData["RightTeam"]["multiLink"] || "";
+        }
+    }
+});
+
 const originalWebSocketSend = WebSocket.prototype.send;
 WebSocket.prototype.send = function (type, message) {
     wsSend = {
@@ -71,3 +101,26 @@ function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000"
     element.style.color = textColor;
     return textColor;
 }
+
+function saveTeamInfo(team) {
+    const teamData = {
+        name: document.getElementById(`${team.toLowerCase()}TeamName`).value,
+        player1: {
+            name: document.getElementById(`top${team}Name`).value,
+            pronouns: document.getElementById(`top${team}Pronouns`).value,
+        },
+        player2: {
+            name: document.getElementById(`bottom${team}Name`).value,
+            pronouns: document.getElementById(`bottom${team}Pronouns`).value,
+        },
+        inputColor: document.getElementById(`${team.toLowerCase()}InColor`).value,
+        outputColor: document.getElementById(`${team.toLowerCase()}OutColor`).value,
+        multiLink: document.getElementById(`${team.toLowerCase()}MultiLink`).value,
+    };
+    teamsRep.value[`${team}Team`] = teamData;
+    console.log(`Saved ${team} team info:`, teamData);
+    websocket.send("team_data_update", teamsRep.value);
+}
+
+document.getElementById("saveLeftTeam").addEventListener("click", () => saveTeamInfo("Left"));
+document.getElementById("saveRightTeam").addEventListener("click", () => saveTeamInfo("Right"));

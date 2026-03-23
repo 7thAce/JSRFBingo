@@ -51,6 +51,8 @@ function init() {
     {
         areasDict[area] = new LevelMetadata(area);
     });
+    leftTeamData = new Team();
+    rightTeamData = new Team();
 }
 
 function publish(type, message) {
@@ -209,6 +211,7 @@ module.exports = function(nodecg) {
 }
 
 function handleMessage(message) {
+    console.log(message);
     switch (message["type"]) {
         case "connect":
             console.log(`Client connected: ${message["source"]}`);
@@ -327,30 +330,9 @@ function handleCharacterUnlock(characterData) {
 }
 
 function handleTeamDataUpdate(message) {
-    example_data = {"teams": {
-        "leftTeam": {
-            "display_data": {
-                "name": "Team A",
-                "players": ["Player 1", "Player 2"],
-                "inputColor": "#FF0000",
-                "outputColor": "#880000",
-                "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
-            }
-        },
-        "rightTeam": {
-            "display_data": {
-                "name": "Team B",
-                "players": ["Player 3", "Player 4"], 
-                "inputColor": "#0000FF",
-                "outputColor": "#000088",
-                "multiLink": "asdf-asdf-asdf-asdf-asdf-asdf"
-            }
-        },
-    }};
-
-    leftTeamData["display_data"] = message["message"]["teams"]["leftTeam"]["display_data"];
-    rightTeamData["display_data"] = message["message"]["teams"]["rightTeam"]["display_data"];
-    // this preserves all of the other game data that will exist like locations, graf, etc.
+    leftTeamData["displayData"] = message["message"]["LeftTeam"];
+    rightTeamData["displayData"] = message["message"]["RightTeam"];
+    console.log("Team data updated!");
 }
 
 function handleKillCombo(message) {
@@ -589,11 +571,13 @@ class GameFeed {
 
 class Team {
     // Display Data
-    name = "";
-    players = [];
-    inputColor = "";
-    outputColor = "";
-    outputForeColor = "";
+    displayData = {
+        name: "",
+        players: [],
+        inputColor: "",
+        outputColor: "",
+        outputForeColor: ""
+    }
 
     // Game Data
     levels = [];
@@ -602,16 +586,17 @@ class Team {
     maxScore = 0;
     bingoCount = 0;
 
-    constructor(_teamData) {
+    constructor() {
         // todo, set all the stuff.
         // for each player in playerData (player#)
-        this.players.push(new Player(_teamData[playerData]));
-        allAreas.forEach(area => 
-        {
-            areasDict[area] = new LevelProgress(area);
-        });
-    }
+        // this.players.push(new Player(_teamData[playerData]));
 
+        // TODO: Uncomment and check this. It's late.
+        // allAreas.forEach(area => 
+        // {
+        //     areasDict[area] = new LevelProgress(area);
+        // });
+    }
 }
 
 class Player {

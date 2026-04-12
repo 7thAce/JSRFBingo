@@ -37,8 +37,12 @@ let rightTeamData = null;
 shibuyaAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE];
 koganeAreas = [LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ];
 bentenAreas = [LEVELS.x99TH, LEVELS.STADIUM, LEVELS.SKYSCRAPER, LEVELS.SKYDINO, LEVELS.HWY0];
-var allAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE, LEVELS.x99TH, LEVELS.SKYSCRAPER, LEVELS.HWY0, LEVELS.SKYDINO, LEVELS.STADIUM, LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ, LEVELS.GARAGE, LEVELS.STADIUM];
+var allAreas = shibuyaAreas.concat(koganeAreas, bentenAreas, [LEVELS.GARAGE, LEVELS.STADIUM]);
 areasDict = {};
+
+// GENERAL TODO:
+// We need to try and pull/request the team data automatically if we can.
+// Or, we leave it cached from a replicant. Unsure.
 
 
 let subscribers = [];
@@ -46,13 +50,14 @@ let subscribers = [];
 // nodecg.log.info("Server version 2")
 
 function init() {
-    currentBingoGame = new Game();
     allAreas.forEach(area => 
     {
         areasDict[area] = new LevelMetadata(area);
     });
-    leftTeamData = new Team();
-    rightTeamData = new Team();
+    leftTeamData = new Team("left");
+    rightTeamData = new Team("right");
+
+    currentBingoGame = new Game();
 }
 
 function publish(type, message) {
@@ -76,6 +81,7 @@ function publish(type, message) {
 ws_read.on('connection', function connection(ws) {
     subscribers.push(ws);
     console.log("Received client connection");
+    publish("game_state_update", currentBingoGame.toJson());
 
     ws.on('message', function incoming(message) {
         // console.log(message);
@@ -130,7 +136,7 @@ module.exports = function(nodecg) {
     nodecg.listenFor('launch-automarker', (idData) => {
         nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
         nodecg.log.info("Launching Automarker with parameters...");
-        launchAutomarker(idData.ID1, idData.ID2);
+        launchKevingoReader(idData.ID1, idData.ID2);
     });
 
     nodecg.listenFor('launch-streamlink-all', () => {
@@ -222,7 +228,7 @@ function handleMessage(message) {
             handleNewBoard(message["message"]);
             return;
         case "board_update":
-            console.log("Received board update.");
+            console.log("Received board update."); // AQUI?
             handleBoardUpdate(message["message"]);
             return;
         case "player_connect":
@@ -285,6 +291,9 @@ function handleConnect(message) {
 function handleNewBoard(boardData) {
     archiveCurrentGame();
     currentBingoGame = new Game(boardData);
+    console.log("New board data: ", boardData);
+    handleBoardUpdate(boardData);
+    return;
 }
 
 function handleBoardUpdate(boardData) {
@@ -345,7 +354,7 @@ function archiveCurrentGame() {
         return;
     }
     let timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    let filename = `bingo_game_${timestamp}.json`;
+    let filename = `logs/bingo_game_${timestamp}.json`;
     fs.writeFile(filename, JSON.stringify(currentBingoGame), (err) => {
         if (err) {
             console.error("Error saving game archive:", err);
@@ -364,6 +373,8 @@ function archiveCurrentGame() {
 
 // TODO: Check that boarddata is sent the same way. We might have to handle bingosync and kevingo differently.
 function setBoardData(boardData) {
+    console.log("Board data is...");
+    console.log(boardData);
     // Reset operations
     for (let team of currentBingoGame.teams) {
         team.ownedSquares = [];
@@ -376,14 +387,21 @@ function setBoardData(boardData) {
         boardSquare.AssignPropsFromData(boardJson[i]);
         areasDict[boardSquare.level].AssignPropsFromSquare(boardSquare);
 
+        // AQUI
+        // console.log(currentBingoGame.teams);
+        // {"name":"Shibuya 094 - Tricks x 25","slot":"slot5","colors":"green"}
+        console.log(`Square color is ${boardSquare.inputColor}`);
         for (let team of currentBingoGame.teams) {
-            if (team.inputColor == boardSquare._teamColor) {
-                boardSquare.ownedTeam = team;
+            console.log(`Checking if team ${team.displayData.name} with color ${team.displayData.inputColor} owns square with color ${boardSquare.inputColor}`);
+            if (team.displayData.inputColor == boardSquare.inputColor) {
+                boardSquare.outputColor = team.displayData.outputColor;
+                console.log(`Found a match for team ${team.displayData.name} with color ${team.displayData.inputColor}`);
                 team.ownedSquares.push(boardSquare);
             }
         }
     }
-    currentBingoGame.board.printBoardState();
+    currentBingoGame.board.printBoardState(currentBingoGame.teams);
+    publish("game_state_update", currentBingoGame.toJson());
 }
 
 (function pingTimer() {
@@ -513,28 +531,35 @@ class Board {
         return this.getSquare(row, col);
     }
 
-    printBoardState() {
+    printBoardState(teams) {
         let boardState = "";
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
                 const square = this.board[row][col];
-                boardState += `[${square.text} | ${square.ownedTeam ? square.ownedTeam.name : "None"}] `;
+                const owner = square.getOwner(teams);
+                boardState += `[${square.text} | ${owner ? owner.displayData.name : "None"}] `;
             }
             boardState += "\n";
         }
         console.log(boardState);
     }
+
+    getJSON() {
+        return JSON.stringify(this);
+    }
 }
 
 class Game {
     bingoCount = 0;
+    scoreToWin = 15; // Placeholder
     inProgress = false;
     events = [];
     gameFeed = [];
     chatLog = [];
     teams = [];
     board = null;
-    regions = [];
+    startTime = 0;
+    // regions = [];
 
     // constructor (_boardData, _teamData) {
     //     this.bingoCount = 0;
@@ -551,12 +576,16 @@ class Game {
         this.bingoCount = 0;
         this.inProgress = false;
         this.events = [];
-        this.gameFeed = ["", "", "Waiting for bingo..."]; // This will get changed to some default objects.
+        this.gameFeed = []; // This will get changed to some default objects.
         this.chatLog = [];
-        this.teams = [];
+        this.teams = [leftTeamData, rightTeamData];
         this.board = new Board();
         this.regions = [];
         console.log("Created new game, waiting for data...");
+    }
+
+    toJson() {
+        return JSON.stringify(this);
     }
 }
 
@@ -570,6 +599,7 @@ class GameFeed {
 }
 
 class Team {
+    id = "";
     // Display Data
     displayData = {
         name: "",
@@ -586,7 +616,8 @@ class Team {
     maxScore = 0;
     bingoCount = 0;
 
-    constructor() {
+    constructor(id) {
+        this.id = id;
         // todo, set all the stuff.
         // for each player in playerData (player#)
         // this.players.push(new Player(_teamData[playerData]));
@@ -596,6 +627,10 @@ class Team {
         // {
         //     areasDict[area] = new LevelProgress(area);
         // });
+    }
+
+    toJson() {
+        return JSON.stringify(this);
     }
 }
 
@@ -613,33 +648,26 @@ class Player {
 }
 
 class Square {
+    id = "";
     level = null;
     region = null;
     text = "";
     isGraffiti = false;
     value = 0;
-    ownedTeam = null;
-    _teamColor = null;
-    $select = null;
+    inputColor = null;
+    outputColor = null;
     isDefault = true;
-    prevOwnedTeam = null;
     row = -1;
     col = -1;
-    topText = "";
-    midText = "";
-    botText = "";
 
     constructor(row, col) {
         this.row = row;
         this.col = col;
+        this.id = `${row},${col}`;
     }
 
-    ColorBackground() {
-        if (this.ownedTeam != null) {
-            this.$select.css("background-color", this.outputcolor); 
-        } else {
-            this.$select.css("background-color", "#111111");
-        }
+    getOwner(teams) {
+        return teams.find(team => team.ownedSquares.includes(this));
     }
 
     AssignPropsFromData(squareData) {
@@ -660,40 +688,18 @@ class Square {
         }
 
         this.text = squareText;
-        this.SetDisplayText(squareText);
+        this.inputColor = squareData.colors;
+        // this.SetDisplayText(squareText);
 
         this.isDefault = true;
-        let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Cube", "Rhyth", "Soda", "Jazz"];
-        checkArray.forEach(keyword => {
-            if (this.midText.includes(keyword)) {
-                this.isDefault = false;
-            }
-        });
+        // let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Cube", "Rhyth", "Soda", "Jazz"];
+        // checkArray.forEach(keyword => {
+        //     if (this.midText.includes(keyword)) {
+        //         this.isDefault = false;
+        //     }
+        // });
 
         // TODO: Are we setting team/color data here? That might be bad if we're not.
-    }
-
-    SetDisplayText(basetext) {
-        if (basetext.includes("-")) {
-            let parts = basetext.split(" - ")[0].split(" ");
-            this.botText = parts.splice(-1)[0];
-            this.topText = parts.join(" ");
-            this.midText = basetext.split(" - ")[1];
-        }
-
-        if (basetext.includes("Unlock")) {
-            let parts = basetext.split(" Unlock ");
-            this.botText = "Char";
-            this.topText = parts[0];
-            this.midText = parts[1];
-        }
-
-        if (basetext.toLowerCase().includes("graffiti")) {
-            let parts = basetext.split(" 100% ")[0].split(" ");
-            this.botText = "Graf";
-            this.topText = parts[0];
-            this.midText = "100% Graffiti";
-        }
     }
 }
 

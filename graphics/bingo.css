@@ -1,0 +1,129 @@
+:root {
+    --left-color: #12AF12;
+    --right-color: #AF12AF;
+    --mcolor: #CC0000;
+}
+
+body {
+    font-family: "Be Vietnam Pro", "Segoe UI Black", Helvetica, Arial, sans-serif;
+}
+
+#bgdiv {
+    background-image: url("gfx/s8_center_panel.png");
+    z-index: -10;
+    width: 1920px;
+    height: 1080px;
+    left: 0px;
+    top: 0px;
+    position: absolute;
+    background-repeat: no-repeat;
+}
+
+#board {
+    background-color: #000;
+    height: 476px;
+    width: 476px;
+    top: 381px;
+    left: 722px;
+
+    display: inline-block;
+    position: absolute;
+    font-size: 14px;
+    font-family: "Bai Jamjuree",Helvetica,Arial,sans-serif;
+    /* visibility: hidden; */
+}
+
+.square {
+    height: 94px;
+    width: 94px;
+    position: relative;
+    float: left;
+    margin-top: 1px;
+    margin-left: 1px;
+    padding-top: 0px;
+    border: 0px solid;
+    background-color: #111;
+    color: #fff;
+    text-align: center;
+}
+
+.squareanimationleft {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkleft;
+}
+
+.squareanimationright {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkright;
+}
+
+@keyframes squaremarkleft {
+    from {
+        box-shadow: 0px 0px 30px 25px var(--left-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--left-color);
+        background-color: var(--left-color);
+        z-index: 0;
+    }
+}
+
+@keyframes squaremarkright {
+    from {
+        box-shadow: 0px 0px 20px 15px var(--right-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--right-color);
+        background-color: var(--right-color);
+        z-index: 0;
+    }
+}
+
+.square .toptext {
+    width: 100%;
+    margin-top: 5px;
+    height: 25px;
+    position: relative;
+    float: left;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: bold;
+    -webkit-text-stroke-width: 0.2px;
+    -webkit-text-stroke-color: black;
+    /* text-shadow: -0.5px 0.5px 1px white; */
+}
+
+.square .midtext {
+    width: calc(100% - 4px);
+    height: 48px;
+    position: relative;
+    float: left;
+    display: flex;
+    padding-left: 2px;
+    padding-right: 2px;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    z-index: 1;
+}
+
+.squaretext .midtext .default {
+    color: #DD0;
+}
+
+.square .bottext {
+    /* ackground-color: #550000; */
+    width: calc(100% - 2px);
+    height: 15px;
+    position: relative;
+    float: left;
+    padding-right: 2px;
+    font-size: 10px;
+    display: flex;
+    justify-content: right;
+    align-items: flex-end;
+    font-style: italic;
+    color: #BBB;
+}

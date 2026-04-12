@@ -1,37 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 	<head>
-		<meta charset="UTF-8" />
-		<style>
-			body {
-				font-family: sans-serif;
-			}
-
-			.monospace {
-				font-family: monospace;
-			}
-		</style>
-		<script type="module" src="./bingo.js"></script>
+		<link rel="stylesheet" href="bingo.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 	</head>
 	<body>
-		<p>
-			Hello, I'm one of the graphics in your bundle! I'm where you put the graphics you want to run in your
-			broadcast software!
-		</p>
+		<div id="bgdiv"></div>
+		<div id="tempdiv">
+			<div id="leftName"></div>
+			<div id="leftScore"></div>
+			<div id="rightName"></div>
+			<div id="rightScore"></div>
+			<div id="board">
+				<div id="square00" class="square unmarked"><div id="toptext00" class="squaretext toptext"></div><div id="midtext00" class="squaretext midtext"></div><div id="bottext00" class="squaretext bottext"></div></div>
+				<div id="square01" class="square unmarked"><div id="toptext01" class="squaretext toptext"></div><div id="midtext01" class="squaretext midtext"></div><div id="bottext01" class="squaretext bottext"></div></div>
+				<div id="square02" class="square unmarked"><div id="toptext02" class="squaretext toptext"></div><div id="midtext02" class="squaretext midtext"></div><div id="bottext02" class="squaretext bottext"></div></div>
+				<div id="square03" class="square unmarked"><div id="toptext03" class="squaretext toptext"></div><div id="midtext03" class="squaretext midtext"></div><div id="bottext03" class="squaretext bottext"></div></div>
+				<div id="square04" class="square unmarked"><div id="toptext04" class="squaretext toptext"></div><div id="midtext04" class="squaretext midtext"></div><div id="bottext04" class="squaretext bottext"></div></div>
 
-		<p>
-			To edit me, open "<span class="monospace">src/graphics/index.html</span>" and "<span class="monospace"
-				>src/graphics/index.js</span
-			>" in your favorite text editor or IDE.
-		</p>
+				<div id="square10" class="square unmarked"><div id="toptext10" class="squaretext toptext"></div><div id="midtext10" class="squaretext midtext"></div><div id="bottext10" class="squaretext bottext"></div></div>
+				<div id="square11" class="square unmarked"><div id="toptext11" class="squaretext toptext"></div><div id="midtext11" class="squaretext midtext"></div><div id="bottext11" class="squaretext bottext"></div></div>
+				<div id="square12" class="square unmarked"><div id="toptext12" class="squaretext toptext"></div><div id="midtext12" class="squaretext midtext"></div><div id="bottext12" class="squaretext bottext"></div></div>
+				<div id="square13" class="square unmarked"><div id="toptext13" class="squaretext toptext"></div><div id="midtext13" class="squaretext midtext"></div><div id="bottext13" class="squaretext bottext"></div></div>
+				<div id="square14" class="square unmarked"><div id="toptext14" class="squaretext toptext"></div><div id="midtext14" class="squaretext midtext"></div><div id="bottext14" class="squaretext bottext"></div></div>
+				
+				<div id="square20" class="square unmarked"><div id="toptext20" class="squaretext toptext"></div><div id="midtext20" class="squaretext midtext"></div><div id="bottext20" class="squaretext bottext"></div></div>
+				<div id="square21" class="square unmarked"><div id="toptext21" class="squaretext toptext"></div><div id="midtext21" class="squaretext midtext"></div><div id="bottext21" class="squaretext bottext"></div></div>
+				<div id="square22" class="square unmarked"><div id="toptext22" class="squaretext toptext"></div><div id="midtext22" class="squaretext midtext"></div><div id="bottext22" class="squaretext bottext"></div></div>
+				<div id="square23" class="square unmarked"><div id="toptext23" class="squaretext toptext"></div><div id="midtext23" class="squaretext midtext"></div><div id="bottext23" class="squaretext bottext"></div></div>
+				<div id="square24" class="square unmarked"><div id="toptext24" class="squaretext toptext"></div><div id="midtext24" class="squaretext midtext"></div><div id="bottext24" class="squaretext bottext"></div></div>
 
-		<p>You can use any libraries, frameworks, and tools you want. There are no limits.</p>
+				<div id="square30" class="square unmarked"><div id="toptext30" class="squaretext toptext"></div><div id="midtext30" class="squaretext midtext"></div><div id="bottext30" class="squaretext bottext"></div></div>
+				<div id="square31" class="square unmarked"><div id="toptext31" class="squaretext toptext"></div><div id="midtext31" class="squaretext midtext"></div><div id="bottext31" class="squaretext bottext"></div></div>
+				<div id="square32" class="square unmarked"><div id="toptext32" class="squaretext toptext"></div><div id="midtext32" class="squaretext midtext"></div><div id="bottext32" class="squaretext bottext"></div></div>
+				<div id="square33" class="square unmarked"><div id="toptext33" class="squaretext toptext"></div><div id="midtext33" class="squaretext midtext"></div><div id="bottext33" class="squaretext bottext"></div></div>
+				<div id="square34" class="square unmarked"><div id="toptext34" class="squaretext toptext"></div><div id="midtext34" class="squaretext midtext"></div><div id="bottext34" class="squaretext bottext"></div></div>
 
-		<p>
-			Visit <a href="https://nodecg.dev" target="_blank" rel="noopener">https://nodecg.dev</a> for full
-			documentation.
-		</p>
-
-		<p>Have fun!</p>
+				<div id="square40" class="square unmarked"><div id="toptext40" class="squaretext toptext"></div><div id="midtext40" class="squaretext midtext"></div><div id="bottext40" class="squaretext bottext"></div></div>
+				<div id="square41" class="square unmarked"><div id="toptext41" class="squaretext toptext"></div><div id="midtext41" class="squaretext midtext"></div><div id="bottext41" class="squaretext bottext"></div></div>
+				<div id="square42" class="square unmarked"><div id="toptext42" class="squaretext toptext"></div><div id="midtext42" class="squaretext midtext"></div><div id="bottext42" class="squaretext bottext"></div></div>
+				<div id="square43" class="square unmarked"><div id="toptext43" class="squaretext toptext"></div><div id="midtext43" class="squaretext midtext"></div><div id="bottext43" class="squaretext bottext"></div></div>
+				<div id="square44" class="square unmarked"><div id="toptext44" class="squaretext toptext"></div><div id="midtext44" class="squaretext midtext"></div><div id="bottext44" class="squaretext bottext"></div></div>
+			</div>
+		</div>
 	</body>
+	<script src="bingo.js"></script>
 </html>

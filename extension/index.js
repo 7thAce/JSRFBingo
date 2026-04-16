@@ -4,9 +4,12 @@ const fs = require('fs');
 
 const ws_read = new WebSocket.Server({ port: 7135 });
 const WS_SOURCE = "Server"
+const kevingoReader = null;
 
 const { launchKevingoReader } = require("../../../stuff/KevingoReader.js");
 const { launchAutomarker } = require("./MultiNode/multinode.js");
+const { launchGameReader } = require("./MultiNode/gamereader.js");
+const { message } = require('git-rev-sync');
 
 const GRAFFITIPOINTS = 3;
 const BINGOPOINTS = 2;
@@ -48,6 +51,11 @@ areasDict = {};
 let subscribers = [];
 // nodecg.log.info("Websocket started on port 7Ace");
 // nodecg.log.info("Server version 2")
+
+process.on('uncaughtException', function(err) {
+    console.log(err);
+    setInterval(function(){}, 5000); // Keeps process alive
+});
 
 function init() {
     allAreas.forEach(area => 
@@ -136,73 +144,79 @@ module.exports = function(nodecg) {
     nodecg.listenFor('launch-automarker', (idData) => {
         nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
         nodecg.log.info("Launching Automarker with parameters...");
-        launchKevingoReader(idData.ID1, idData.ID2);
+        kevingoReader = launchKevingoReader(idData.ID1, idData.ID2);
     });
 
-    nodecg.listenFor('launch-streamlink-all', () => {
-        nodecg.log.info("Launching all streamlinks!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
+    nodecg.listenFor('launch-game-reader', (idData) => {
+        nodecg.log.info("Launching Game Reader!");
+        console.log(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
+        gameReader = launchGameReader(idData.id);
+        // TODO: Store the game reader to the left or right team based on ID.
+        // Alternatively, we can just send left or right and grab the ID from the team object.
+        console.log("Game reader return:");
+        console.log(gameReader);
     });
 
-    nodecg.listenFor('launch-streamlink-poisonjam', () => {
-        nodecg.log.info("Launching all streamlinks!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
-    });
 
-    nodecg.listenFor('launch-streamlink-loveshockers', () => {
-        nodecg.log.info("Launching all streamlinks!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
-    });
+    // nodecg.listenFor('launch-streamlink-all', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
 
-    nodecg.listenFor('launch-streamlink-pots', () => {
-        nodecg.log.info("Launching all streamlinks!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
-    });
+    // nodecg.listenFor('launch-streamlink-poisonjam', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
 
-    nodecg.listenFor('launch-streamlink-doomriders', () => {
-        nodecg.log.info("Launching all streamlinks!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
-    });
+    // nodecg.listenFor('launch-streamlink-loveshockers', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
 
-    nodecg.listenFor('launch-reader-bingosync', () => {
-        nodecg.log.info("Launching Bingosync reader into room ${room_id}!");
-        exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
-            if (error) {
-                nodecg.log.error(`Client error: ${error}`);
-                return;
-            }
-        });
-    });
+    // nodecg.listenFor('launch-streamlink-pots', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
 
-    nodecg.listenFor('launch-reader-kevingo', () => {
-        nodecg.log.info("Launching Kevingo reader!");
-        launchKevingoReader();
-    });
+    // nodecg.listenFor('launch-streamlink-doomriders', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-reader-bingosync', () => {
+    //     nodecg.log.info("Launching Bingosync reader into room ${room_id}!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
     
     nodecg.on('close', () => {
         nodecg.log.info('NodeCG server closed successfully. Performing cleanup tasks...');
@@ -274,6 +288,9 @@ function handleMessage(message) {
         case "kill_combo":
             handleKillCombo(message["message"]);
             return;
+        case "automarker_forward":
+            handleAutomarkerForward(message["message"]);
+            return;
         default:
             console.log(`!! Received unhandled message type ${message["type"]}.`);
             return;
@@ -319,6 +336,11 @@ function handlePlayerLocationChange(playerData) {
 }
 
 function handleGraffitiSprayed(graffitiData) {
+
+// function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
+// 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
+// 	kevingoSocket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
+// }
     return;
 }
 
@@ -345,6 +367,12 @@ function handleTeamDataUpdate(message) {
 }
 
 function handleKillCombo(message) {
+    return;
+}
+
+function handleAutomarkerForward(message) {
+    console.log("I'll forward this in the future.");
+    // kevingoServer.send("automarker_forward", message["message"]);
     return;
 }
 

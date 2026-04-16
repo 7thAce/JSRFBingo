@@ -67,6 +67,11 @@ function launchClient() {
     nodecg.sendMessage('launch-reader-kevingo');
 }
 
+function launchGameReader() {
+    console.log("Launching Game Reader...");
+    nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("leftMultiLink").value});
+}
+
 function launchAutomarker() {
     console.log("Launching automarker...");
     const teamLeftID = document.getElementById("leftMultiLink").value;

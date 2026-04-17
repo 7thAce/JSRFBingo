@@ -1,0 +1,214 @@
+{
+    "standings": [
+        {
+        "position": 1,
+        "team": "0xSWARM",
+        "players": [
+            "7thAce",
+            "Bee"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 2,
+        "team": "Night Ninjas",
+        "players": [
+            "jon",
+            "SyiLenSa"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 3,
+        "team": "No Bun Intended",
+        "players": [
+            "yomsa",
+            "LaurieDBunnykins"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 4,
+        "team": "Generation zzz",
+        "players": [
+            "claws",
+            "Kevin"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 5,
+        "team": "F.C.P.R.E.M.I.X",
+        "players": [
+            "vaen",
+            "dynamight"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 6,
+        "team": "Nyarsonists",
+        "players": [
+            "Nae",
+            "korenaz"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 7,
+        "team": "Team Name Pending",
+        "players": [
+            "nago",
+            "Flashy"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        },
+        {
+        "position": 8,
+        "team": "Cook or Be Cooked",
+        "players": [
+            "Miku_ds",
+            "Fatalr0ck"
+        ],
+        "matchWins": 0,
+        "matchLosses": 0,
+        "gameWins": 0,
+        "gameLosses": 0,
+        "form": "WWLWL--"
+        }
+    ],
+    "results": {
+        "round1": [
+            {
+                "team1": "0xSWARM",
+                "team2": "Night Ninjas",
+                "score1": 2,
+                "score2": 1
+            },
+            {
+                "team1": "No Bun Intended",
+                "team2": "Generation zzz",
+                "score1": 2,
+                "score2": 0
+            },
+            {
+                "team1": "Team Name Pending",
+                "team2": "Nyarsonists",
+                "score1": 1,
+                "score2": 2
+            },
+            {
+                "team1": "F.C.P.R.E.M.I.X",
+                "team2": "Cook or Be Cooked",
+                "score1": 0,
+                "score2": 2
+            }
+        ],
+        "round2": [
+            {
+                "team1": "0xSWARM",
+                "team2": "Night Ninjas",
+                "score1": 2,
+                "score2": 1
+            },
+            {
+                "team1": "No Bun Intended",
+                "team2": "Generation zzz",
+                "score1": 2,
+                "score2": 0
+            },
+            {
+                "team1": "Team Name Pending",
+                "team2": "Nyarsonists",
+                "score1": 1,
+                "score2": 2
+            },
+            {
+                "team1": "F.C.P.R.E.M.I.X",
+                "team2": "Cook or Be Cooked",
+                "score1": 0,
+                "score2": 2
+            }
+        ],
+        "round3": [
+            {
+                "team1": "0xSWARM",
+                "team2": "Night Ninjas",
+                "score1": 2,
+                "score2": 1
+            },
+            {
+                "team1": "No Bun Intended",
+                "team2": "Generation zzz",
+                "score1": 2,
+                "score2": 0
+            },
+            {
+                "team1": "Team Name Pending",
+                "team2": "Nyarsonists",
+                "score1": 1,
+                "score2": 2
+            },
+            {
+                "team1": "F.C.P.R.E.M.I.X",
+                "team2": "Cook or Be Cooked",
+                "score1": 0,
+                "score2": 2
+            }
+        ],
+        "round4": [
+            {
+                "team1": "0xSWARM",
+                "team2": "Night Ninjas",
+                "score1": 2,
+                "score2": 1
+            },
+            {
+                "team1": "No Bun Intended",
+                "team2": "Generation zzz",
+                "score1": 2,
+                "score2": 0
+            },
+            {
+                "team1": "Team Name Pending",
+                "team2": "Nyarsonists",
+                "score1": 1,
+                "score2": 2
+            },
+            {
+                "team1": "F.C.P.R.E.M.I.X",
+                "team2": "Cook or Be Cooked",
+                "score1": 0,
+                "score2": 2
+            }
+        ]
+    }
+}

@@ -7,7 +7,7 @@ const WS_SOURCE = "Game Reader";
 let nodecgServer = new WebSocket("ws://localhost:7135");
 let readers = [];
 
-const ID1 = ["cedc46d4-1df3-4738-9257-58bd39124dee", "7thAce"];
+// const ID1 = ["cedc46d4-1df3-4738-9257-58bd39124dee", "7thAce"];
 
 
 function launchGameReader(multiID) {
@@ -24,6 +24,7 @@ class TeamGameReader {
     conn = null;
 
     constructor(multiID) {
+        console.log(`MultiID is: ${multiID}`);
         if (multiID.includes("connect=")) {
             this.multiID = multiID.split("connect=")[1];
         } else {
@@ -107,7 +108,7 @@ class TeamGameReader {
                         console.log(`Set player index: ${jsonData.b}`);
                         break;
                     case 4:
-                        HandlePlayerRegister(dwsToString(jsonData.dw1, jsonData.dw2, jsonData.dw3), jsonData.b, this);
+                        // HandlePlayerRegister(dwsToString(jsonData.dw1, jsonData.dw2, jsonData.dw3), jsonData.b, this);
                         break;
                     case 5:
                         console.log(`Tickrate set to: ${jsonData.dw1}`);
@@ -216,6 +217,7 @@ function HandlePlayerRegister(playerName, playerIndex, teamObj) {
 }
 
 function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
+    // This might be a single tag and we only need it on completion.
 	nodecgServer.send("graffiti_sprayed", {
         "teamID": teamObj.multiID,
         "levelID": levelID,
@@ -227,11 +229,15 @@ function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
 }
 
 function HandleSoulCollect(soulID, playerIndex, teamObj) {
-    console.log(`[${GetNow()}] Player ${teamObj.players[playerIndex].name} picked up soul number ${soulID}.`);
+    // console.log(soulID);
+    // console.log(playerIndex);
+    // console.log(teamObj);
+    // TODO: Fix the player identification. I really want to handle that here.
+    console.log(`[${GetNow()}] Player ${"7thAce"} picked up soul number ${soulID}.`);
     nodecgServer.send("soul_collected", {
         "teamID": teamObj.multiID,
         "soulID": soulID,
-        "player": teamObj.players[playerIndex]
+        "player": "7thAce"
     });
 	return;
 }
@@ -267,7 +273,7 @@ function HandleCharUnlock(charID, playerIndex, teamObj) {
 
 // Player Tracker?
 function HandleAreaChange(levelID, playerIndex, teamObj) {
-    nodecgServer.send("area_change", {
+    nodecgServer.send("player_location_change", {
         "teamID": teamObj.multiID,
         "levelID": levelID,
         "player": teamObj.players[playerIndex]
@@ -303,6 +309,11 @@ WebSocket.prototype.send = function (type, message) {
     }
     originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
 };
+
+function GetNow() {
+	let rightNow = new Date();
+	return rightNow.toLocaleTimeString().split(" ")[0] + "." + (rightNow.getMilliseconds() + "000").slice(0,3);
+}
 
 module.exports = {
     launchGameReader

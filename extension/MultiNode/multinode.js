@@ -562,7 +562,6 @@ Helper/Data functions.
 function GetNow() {
 	let rightNow = new Date();
 	return rightNow.toLocaleTimeString().split(" ")[0] + "." + (rightNow.getMilliseconds() + "000").slice(0,3);
-
 }
 
 function Commafy(x) {

@@ -265,6 +265,10 @@ function handleMessage(message) {
             console.log("Received graffiti sprayed.");
             handleGraffitiSprayed(message["message"]);
             return;
+        case "graffiti_completed":
+            console.log("Received graffiti completed.");
+            handleGraffitiCompleted(message["message"]);
+            return;
         case "tape_collected":
             console.log("Received tape collected.");
             handleTapePickup(message["message"]);
@@ -315,11 +319,12 @@ function handleNewBoard(boardData) {
 
 function handleBoardUpdate(boardData) {
     setBoardData(boardData);
+    // I think we need to find a square diff and then call the square changed event.
     return;
 }
 
 function handlePlayerConnect(playerData) {
-    // This will mirror multinode and should 
+    // This will mirror multinode and should deal with it all internally.
     return;
 }
 
@@ -332,31 +337,45 @@ function handlePlayerNameChange(playerData) {
 }
 
 function handlePlayerLocationChange(playerData) {
+    let event = new GameEvent(EVENT_TYPES.CHANGE_LOCATION, playerData);
+    // Set data.
+    publish("player_location_change", currentBingoGame.teams);
     return;
 }
 
-function handleGraffitiSprayed(graffitiData) {
+function handleGraffitiSprayed(graffitiData) { // Single graffiti 
+    let event = new GameEvent(EVENT_TYPES.SPRAY_GRAFFITI, graffitiData);
+    handleMessage({"type": "graffiti_completed", "message": graffitiData}); // Update graffiti data to correct info
+    return;
+}
+
+function handleGraffitiCompleted(graffitiData) { // Entire level
 
 // function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
 // 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
 // 	kevingoSocket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
 // }
+    let event = new GameEvent(EVENT_TYPES.COMPLETE_GRAFFITI, graffitiData);
     return;
 }
 
 function handleTapePickup(tapeData) {
+    let event = new GameEvent(EVENT_TYPES.COLLECT_TAPE, tapeData);
     return;
 }
 
 function handleSoulUnlock(soulData) {
+    let event = new GameEvent(EVENT_TYPES.UNLOCK_SOUL, soulData);
     return;
 }
 
 function handleSoulPickup(soulData) {
+    let event = new GameEvent(EVENT_TYPES.COLLECT_SOUL, soulData);
     return;
 }
 
 function handleCharacterUnlock(characterData) {
+    let event = new GameEvent(EVENT_TYPES.CHARACTER_UNLOCK, characterData);
     return;
 }
 
@@ -389,6 +408,15 @@ function archiveCurrentGame() {
             return;
         }
         console.log(`Game archived to ${filename}`);
+    });
+    let filename2 = `logs/squares_feed_${timestamp}.txt`;
+    let eventsToInclude = [EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.UNMARK_SQUARE, EVENT_TYPES.BINGO_SCORED];
+    fs.writeFile(filename2, currentBingoGame.eventFeedToString(eventsToInclude), (err) => {
+        if (err) {
+            console.error("Error saving game feed archive:", err);
+            return;
+        }
+        console.log(`Game feed archived to ${filename2}`);
     });
 }
 
@@ -485,35 +513,83 @@ const EVENT_TYPES = Object.freeze({
     UNLOCK_SOUL: "Unlock Soul",
     COLLECT_SOUL: "Pick up soul",
     SPRAY_GRAFFITI: "Spray Graffiti",
+    COMPLETE_GRAFFITI: "Complete Graffiti",
+    CHARACTER_UNLOCK: "Unlock Character",
+    BINGO_SCORED: "Bingo Scored",
+    SNIPE: "Snipe",
     UNKNOWN: "Other/Unknown"
 });
 
 class GameEvent {
     type = EVENT_TYPES.UNKNOWN;
-    data = "";
+    data = {};
     timestamp = 0;
     player = null;
 
     constructor(_type, _data) {
         this.timestamp = Date.now();
+        this.data = _data;
+        this.type = _type;
+        console.log(`I am a new ${this.type} event! My data is: ${this.data}`);
+        currentBingoGame.events.push(this);
     }
 
-    toDisplayText() {
-        // TODO: Update placeholder texts to include player info.
+    toDisplayText(displayInfoDict) {
+        let sectionalArray = [];
+        let teamString = displayInfoDict["teamString"] ?? null; // what the fuck is team string for this? replace with team?
+        let timeFormat = displayInfoDict["timeFormat"] ?? null;
+        let timePrefix = null;
+        if (timeFormat != null) {
+            timePrefix = `[${timestampToString(Date.now() - currentBingoGame.startTime, timeFormat)}]`;
+        }
+
         switch (this.type) {
             case EVENT_TYPES.START:
-                return `Game started! ${this.data}`;
+                sectionalArray = [timePrefix, "Game started!"];
+                break;
             case EVENT_TYPES.END:
-                return `Game ended! ${this.data}`;
+                sectionalArray = [timePrefix, "Game ended!"];
+                break;
             case EVENT_TYPES.PAUSE:
-                return `Game paused. ${this.data}`;
+                sectionalArray = [timePrefix, "Game paused."];
+                break;
             case EVENT_TYPES.UNPAUSE:
-                return `Game unpaused. ${this.data}`;
+                sectionalArray = [timePrefix, "Game unpaused."];
+                break;
             case EVENT_TYPES.MARK_SQUARE:
-                return `Square marked: ${this.data}`;
+                sectionalArray = [timePrefix, this.data.player, teamString, "marked", this.data.square];
+                break;
             case EVENT_TYPES.UNMARK_SQUARE:
-                return `Square unmarked: ${this.data}`;
+                sectionalArray = [timePrefix, this.data.player, teamString, "unmarked", this.data.square];
+                break;
+            case EVENT_TYPES.CHANGE_LOCATION:
+                sectionalArray = [timePrefix, this.data.player, teamString, "moved to", GetLevelFromID(this.data.levelID)];
+                break;
+            case EVENT_TYPES.COLLECT_TAPE:
+                sectionalArray = [timePrefix, this.data.player, teamString, "collected tape", this.data.tapeID];
+                break;
+            case EVENT_TYPES.UNLOCK_SOUL:
+                sectionalArray = [timePrefix, this.data.player, teamString, "unlocked soul", GetSoulInfoFromNumber(this.data.soulID)];
+                break;
+            case EVENT_TYPES.COLLECT_SOUL:
+                sectionalArray = [timePrefix, this.data.player, teamString, "collected soul", GetSoulInfoFromNumber(this.data.soulID)];
+                break;
+            case EVENT_TYPES.SPRAY_GRAFFITI:
+                sectionalArray = [timePrefix, this.data.player, teamString, "sprayed graffiti", this.data.graffitiID, "in", GetLevelFromID(this.data.levelID)];
+                break;
+            case EVENT_TYPES.COMPLETE_GRAFFITI:
+                sectionalArray = [timePrefix, this.data.player, teamString, "completed", GetLevelFromID(this.data.levelID), "graffiti"];
+                break;
+            case EVENT_TYPES.CHARACTER_UNLOCK:
+                sectionalArray = [timePrefix, this.data.player, teamString, "unlocked", GetCharacterFromID(this.data.characterID)];
+                break;
+            case EVENT_TYPES.BINGO_SCORED:
+                sectionalArray = [timePrefix, getTeamFromID(this.data.teamID), "scored a bingo!"];
+                break;
+            default:
+                return `Unknown event: ${this.data}`;
         }
+        return sectionalArray.filter(item => item !== null).join(" ");
     }
 }
 
@@ -610,6 +686,22 @@ class Game {
         this.board = new Board();
         this.regions = [];
         console.log("Created new game, waiting for data...");
+    }
+
+    eventFeedToString(outputEventsList) {
+        let feedString = "";
+        this.events.filter(event => outputEventsList.includes(event.type)).forEach(event => {
+            feedString += `${event.toDisplayText({"timeFormat": "[%m:%s.%i]"})}\n`;
+        });
+        return feedString;
+    }
+
+    getGameTime() {
+        if (!this.inProgress) {
+            return 0;
+        }
+
+        return Date.now() - this.startTime;
     }
 
     toJson() {
@@ -861,6 +953,22 @@ class Graffiti {
     }
 }
 
+function timestampToString(timestampMS, dateFormat = "[%m:%s.%i]") {
+    // We're going to use a basic implementation where:
+    // %m is minutes, %s is seconds, %i is milliseconds.
+
+    let minutes = Math.floor(timestampMS / 60000);
+    let seconds = Math.floor((timestampMS % 60000) / 1000);
+    let milliseconds = timestampMS % 1000;
+
+    minutes = String(minutes).padStart(2, '0');
+    seconds = String(seconds).padStart(2, '0');
+    milliseconds = String(milliseconds).padStart(3, '0');
+
+    let dateString = dateFormat.replace("%m", minutes).replace("%s", seconds).replace("%i", milliseconds);
+    return dateString;
+}
+
 // Game Data
 {
 
@@ -874,6 +982,23 @@ function dwsToString(dw1, dw2, dw3) {
     }
     let allBytes = [...dwToBytes(dw1), ...dwToBytes(dw2), ...dwToBytes(dw3)];
     return String.fromCharCode(...allBytes.filter(b => b !== 0));
+}
+
+function formatMilliseconds(ms) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const milliseconds = ms % 1000;
+
+  return (
+    String(minutes).padStart(2, '0') + ":" +
+    String(seconds).padStart(2, '0') + "." +
+    String(milliseconds).padStart(3, '0')
+  );
+}
+
+function GetNow() {
+	let rightNow = new Date();
+	return rightNow.toLocaleTimeString().split(" ")[0] + "." + (rightNow.getMilliseconds() + "000").slice(0,3);
 }
 
 function GetLevelFromID(levelInt) {

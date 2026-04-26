@@ -9,7 +9,7 @@ const teamsRep = nodecg.Replicant("teams", {defaultValue: {}, persistent: true})
 
 websocket.onopen = () => {
     console.log("Connected to WebSocket server.");
-    websocket.send("connect", "Connected");
+    sendToServer("connect", "Connected");
 };
 
 websocket.onclose = () => {
@@ -46,16 +46,14 @@ window.addEventListener('load', () => {
     }
 });
 
-const originalWebSocketSend = WebSocket.prototype.send;
-WebSocket.prototype.send = function (type, message) {
-    wsSend = {
+function sendToServer(type, message) {
+    websocket.send(JSON.stringify({
         "source": WS_SOURCE,
         "timestamp": Date.now(),
         "type": type,
-        "message": message,
-    }
-    originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
-};
+        "message": message
+    }));
+}
 
 function launchServer() {
     console.log("Launching server...");
@@ -124,7 +122,7 @@ function saveTeamInfo(team) {
     };
     teamsRep.value[`${team}Team`] = teamData;
     console.log(`Saved ${team} team info:`, teamData);
-    websocket.send("team_data_update", teamsRep.value);
+    sendToServer("team_data_update", teamsRep.value);
 }
 
 document.getElementById("saveLeftTeam").addEventListener("click", () => saveTeamInfo("Left"));

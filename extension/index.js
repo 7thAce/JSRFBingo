@@ -4,7 +4,6 @@ const fs = require('fs');
 
 const ws_read = new WebSocket.Server({ port: 7135 });
 const WS_SOURCE = "Server"
-const kevingoReader = null;
 
 const { launchKevingoReader } = require("../../../stuff/KevingoReader.js");
 const { launchAutomarker } = require("./MultiNode/multinode.js");
@@ -14,6 +13,8 @@ const { message } = require('git-rev-sync');
 const GRAFFITIPOINTS = 3;
 const BINGOPOINTS = 2;
 const SQUAREPOINTS = 1;
+
+let kevingoReader = null;
 
 const LEVELS = Object.freeze({
     GARAGE: "Garage",
@@ -31,6 +32,10 @@ const LEVELS = Object.freeze({
 	BOTTOMPOINT: "Btm pt.",
 	KIBO: "Kibo",
 	FRZ: "FRZ"
+});
+
+const EVENTS = Object.freeze({
+
 });
 
 let currentBingoGame = null;
@@ -94,6 +99,7 @@ ws_read.on('connection', function connection(ws) {
     ws.on('message', function incoming(message) {
         // console.log(message);
         try {
+            console.log(message);
             let jsonMessage = JSON.parse(message);
             console.log(` -> [${jsonMessage["source"]} @ ${getNow()}] ${jsonMessage["type"]}: ${jsonMessage["message"]}`);
             handleMessage(jsonMessage);
@@ -383,6 +389,23 @@ function handleTeamDataUpdate(message) {
     leftTeamData["displayData"] = message["message"]["LeftTeam"];
     rightTeamData["displayData"] = message["message"]["RightTeam"];
     console.log("Team data updated!");
+    // Recolor the board.
+    for (let i = 0; i < boardJson.length; i++) {
+        boardSquare = currentBingoGame.board.getSquareFromIndex(i);
+
+        for (let team of currentBingoGame.teams) {
+            if (team.displayData.inputColor == boardSquare.inputColor) {
+                boardSquare.outputColor = team.displayData.outputColor;
+            }
+        }
+    }
+    
+    allAreas.forEach(area => 
+        {
+            areasDict[area] = new LevelProgress(area);
+        });
+    publish("game_state_update", currentBingoGame.toJson());
+    // TODO: Call update on board.
 }
 
 function handleKillCombo(message) {
@@ -443,9 +466,6 @@ function setBoardData(boardData) {
         boardSquare.AssignPropsFromData(boardJson[i]);
         areasDict[boardSquare.level].AssignPropsFromSquare(boardSquare);
 
-        // AQUI
-        // console.log(currentBingoGame.teams);
-        // {"name":"Shibuya 094 - Tricks x 25","slot":"slot5","colors":"green"}
         console.log(`Square color is ${boardSquare.inputColor}`);
         for (let team of currentBingoGame.teams) {
             console.log(`Checking if team ${team.displayData.name} with color ${team.displayData.inputColor} owns square with color ${boardSquare.inputColor}`);

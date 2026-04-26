@@ -296,19 +296,19 @@ function dwsToString(dw1, dw2, dw3) {
     return String.fromCharCode(...allBytes.filter(b => b !== 0));
 }
 
-const originalWebSocketSend = WebSocket.prototype.send;
-WebSocket.prototype.send = function (type, message) {
-    if (typeof message !== 'string') {
-        message = JSON.stringify(message);
-    }
-    wsSend = {
-        "source": WS_SOURCE,
-        "timestamp": Date.now(),
-        "type": type,
-        "message": message,
-    }
-    originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
-};
+// const originalWebSocketSend = WebSocket.prototype.send;
+// WebSocket.prototype.send = function (type, message) {
+//     if (typeof message !== 'string') {
+//         message = JSON.stringify(message);
+//     }
+//     wsSend = {
+//         "source": WS_SOURCE,
+//         "timestamp": Date.now(),
+//         "type": type,
+//         "message": message,
+//     }
+//     originalWebSocketSend.call(this, JSON.stringify(wsSend)); // Or modifiedData if applicable
+// };
 
 function GetNow() {
 	let rightNow = new Date();

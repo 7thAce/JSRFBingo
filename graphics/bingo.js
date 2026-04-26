@@ -4,62 +4,84 @@ nodecg.log.info("Here we go now, on the offense.");
 const WS_SOURCE = "Display"
 const server_ws = new WebSocket("ws://localhost:7135");
 
-const originalWebSocketSend = WebSocket.prototype.send;
-WebSocket.prototype.send = function (type, message) {
-    wsSend = {
+function sendToServer(type, message) {
+    server_ws.send(JSON.stringify({
         "source": WS_SOURCE,
         "timestamp": Date.now(),
         "type": type,
-        "message": message,
-    }
-    originalWebSocketSend.call(this, JSON.stringify(wsSend));
-};
+        "message": message
+    }));
+}
 
 server_ws.onopen = () => {
     console.log("Connected to local server.");
-    server_ws.send("connect", "Connected");
+    sendToServer("connect", "Connected");
 };
 
 server_ws.addEventListener("message", (event) => {
     let messageData = JSON.parse(event.data);
+    if (messageData.type != "ping") {
+        console.log(`[${messageData.type}] Received message: ${messageData}`);
+    }
     switch (messageData.type) {
         case "board_update":
+            console.log("Received board update: ", messageData.message);
             updateBoardVisuals(JSON.parse(messageData.message));
             break;
         case "game_state_update":
             console.log("Received game state update: ", messageData.message);
             updateGameState(JSON.parse(messageData.message));
             break;
+        case "team_data_update":
+            console.log("Received team data update: ", messageData.message);
+            updateTeamData2(messageData.message);
         case "ping":
             break;
         default:
             console.log("Received unknown message type: ", messageData.type);
+            break;
     }
-    if (messageData.type != "ping") {
-        console.log("Received message: ", messageData);
-    }
+
 });
 
 const teamsRep = nodecg.Replicant("teams");
 
 teamsRep.on("change", (newTeamsData) => {
     console.log("Teams data updated: ", newTeamsData);
-    updateTeamData(newTeamsData);
+    // updateTeamData(newTeamsData);
 });
 
 function updateTeamData(teamsData) {
+    console.log("Teams data!");
+    console.log(teamsData.leftTeam);
     if (teamsData["LeftTeam"]) {
+        document.getElementById("leftName").textContent = teamsData.LeftTeam.displayData.name;
+        document.getElementById("leftScore").textContent = teamsData.LeftTeam.displayData.score;
     }
     if (teamsData["RightTeam"]) {
+        document.getElementById("rightName").textContent = teamsData.RightTeam.displayData.name;
+        document.getElementById("rightScore").textContent = teamsData.RightTeam.displayData.score;
     }
+    
 }
 
-function updateBoardVisuals(boardData) {
+function updateTeamData2(teamsData) {
+    let leftTeam = teamsData[0];
+    let rightTeam = teamsData[1];
+    document.getElementById("leftName").textContent = leftTeam.displayData.name;
+    document.getElementById("leftScore").textContent = leftTeam.displayData.score;
+
+    document.getElementById("rightName").textContent = rightTeam.displayData.name;
+    document.getElementById("rightScore").textContent = rightTeam.displayData.score;
+}
+
+function updateBoardVisuals(boardData, teamsData) {
     for (let i = 0; i < 25; i++) {
         let rc = ArrayToGrid(i);
         let boardSquare = boardData.board[rc.row][rc.col];
         console.log(boardSquare);
         setSquareVisuals(boardSquare, rc, boardData.teams);
+        setGameDataTexts(teamsData, boardData.pointsToWin, 0);
     }
 
     // Set score
@@ -69,9 +91,29 @@ function updateBoardVisuals(boardData) {
     // document.getElementById("rightTeamScore").textContent = rightTeam ? rightTeam.score : 0;
 }
 
+function getContrastingTextColor(backgroundColor) {
+    // Parse hex color to RGB
+    const hex = backgroundColor.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+
+    // Calculate relative luminance using WCAG formula
+    const luminance = (channel) => {
+        return channel <= 0.03928
+            ? channel / 12.92
+            : Math.pow((channel + 0.055) / 1.055, 2.4);
+    };
+
+    const L = 0.2126 * luminance(r) + 0.7152 * luminance(g) + 0.0722 * luminance(b);
+
+    // Return white text for dark backgrounds, black text for light backgrounds
+    return L > 0.5 ? "#000" : "#fff";
+}
+
 function regionMark(boardSquare) { 
     if (boardSquare.outputColor) {
-        return "#fff"; // TODO: Update for dark contrast.
+        return getContrastingTextColor(boardSquare.outputColor);
     }
 
     if (boardSquare.region == "shibuya") {
@@ -87,6 +129,15 @@ function regionMark(boardSquare) {
     }
 
     return "#fff";
+}
+
+function setSquareTextColor(boardSquare, teamsData) {
+    if (boardSquare.outputColor) {
+        return getContrastingTextColor(boardSquare.outputColor);
+    } else {
+        return "#FFF";
+    }
+
 }
 
 function setSquareVisuals(boardSquare, rc, teams) {
@@ -126,8 +177,21 @@ function setSquareVisuals(boardSquare, rc, teams) {
     document.getElementById(`toptext${rc.row}${rc.col}`).textContent = topText;
     document.getElementById(`toptext${rc.row}${rc.col}`).style.color = regionMark(boardSquare, teams);
     document.getElementById(`midtext${rc.row}${rc.col}`).textContent = midText;
-    //document.getElementById(`midtext${rc.row}${rc.col}`).style.color = regionMark(boardSquare, teams); Set to contrast.
+    document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare, teams); // Set to contrast.
     document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor;
+}
+
+/*
+"teams":[{"id":"left","displayData":{"name":"","players":[],"inputColor":"","outputColor":"","outputForeColor":""},"levels":[],"ownedSquares":[],"score":0,"maxScore":0,"bingoCount":0},{"id":"right","displayData":{"name":"","players":[],"inputColor":"","outputColor":"","outputForeColor":""},"levels":[],"ownedSquares":[],"score":0,"maxScore":0,"bingoCount":0}]
+*/
+
+function setGameDataTexts(teamData, pointsToWin, startTime) {
+    console.log(teamData);
+    // TODO: Check if this needs to be removed, it might be done via replicant which might be unnecessary.
+    updateTeamData2(teamData);
+
+    document.getElementById("gameTime").textContent = "12:34";
+    document.getElementById("pointsToWin").textContent = pointsToWin;
 }
 
 function updateGameState(gameState) {
@@ -139,7 +203,7 @@ function updateGameState(gameState) {
     // calcPointsPerArea(gameState.board);
     // updateGameFeed(gameState.gameFeed);
     // checkForGameSet(gameState.teams); //maybe?
-    updateBoardVisuals(gameState.board);
+    updateBoardVisuals(gameState.board, gameState.teams);
 }
 
 function ArrayToGrid(index) {

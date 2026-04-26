@@ -25,7 +25,7 @@ const LIGHTCOLORS = Object.freeze({
     "#a480ff": "purple"
 })
 
-kevingo = new WebSocket("wss://chat.kevcyg.net");
+kevingo = new WebSocket("wss://chut.kevcyg.net");
 
 kevingo.onopen = () => {
 	console.log("Connected to WebSocket server");

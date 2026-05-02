@@ -3,6 +3,7 @@
 nodecg.log.info("Here we go now, on the offense.");
 const WS_SOURCE = "Display"
 const server_ws = new WebSocket("ws://localhost:7135");
+let gameTimerTick = null;
 
 function sendToServer(type, message) {
     server_ws.send(JSON.stringify({
@@ -35,6 +36,19 @@ server_ws.addEventListener("message", (event) => {
         case "team_data_update":
             console.log("Received team data update: ", messageData.message);
             updateTeamData2(messageData.message);
+            break;
+        case "game_start":
+            console.log("Received game start: ", messageData.message.startTime);
+            handleGameStart(messageData.message.startTime);
+            break;
+        case "game_end":
+            console.log("Received game end: ", messageData.message.endTime);
+            handleGameEnd(messageData.message.endTime);
+            break;
+        case "score_update":
+            console.log("Received score update: ", messageData.message);
+            updateScores(messageData.message);
+            break;
         case "ping":
             break;
         default:
@@ -55,12 +69,12 @@ function updateTeamData(teamsData) {
     console.log("Teams data!");
     console.log(teamsData.leftTeam);
     if (teamsData["LeftTeam"]) {
-        document.getElementById("leftName").textContent = teamsData.LeftTeam.displayData.name;
-        document.getElementById("leftScore").textContent = teamsData.LeftTeam.displayData.score;
+        document.getElementById("leftTeamName").textContent = teamsData.LeftTeam.displayData.name;
+        document.getElementById("leftTeamScore").textContent = teamsData.LeftTeam.displayData.score;
     }
     if (teamsData["RightTeam"]) {
-        document.getElementById("rightName").textContent = teamsData.RightTeam.displayData.name;
-        document.getElementById("rightScore").textContent = teamsData.RightTeam.displayData.score;
+        document.getElementById("rightTeamName").textContent = teamsData.RightTeam.displayData.name;
+        document.getElementById("rightTeamScore").textContent = teamsData.RightTeam.displayData.score;
     }
     
 }
@@ -68,11 +82,11 @@ function updateTeamData(teamsData) {
 function updateTeamData2(teamsData) {
     let leftTeam = teamsData[0];
     let rightTeam = teamsData[1];
-    document.getElementById("leftName").textContent = leftTeam.displayData.name;
-    document.getElementById("leftScore").textContent = leftTeam.displayData.score;
+    document.getElementById("leftTeamName").textContent = leftTeam.displayData.name;
+    document.getElementById("leftTeamScore").textContent = leftTeam.displayData.score;
 
-    document.getElementById("rightName").textContent = rightTeam.displayData.name;
-    document.getElementById("rightScore").textContent = rightTeam.displayData.score;
+    document.getElementById("rightTeamName").textContent = rightTeam.displayData.name;
+    document.getElementById("rightTeamScore").textContent = rightTeam.displayData.score;
 }
 
 function updateBoardVisuals(boardData, teamsData) {
@@ -89,6 +103,40 @@ function updateBoardVisuals(boardData, teamsData) {
     // const rightTeam = boardData.teams.find(t => t.id === "right");
     // document.getElementById("leftTeamScore").textContent = leftTeam ? leftTeam.score : 0;
     // document.getElementById("rightTeamScore").textContent = rightTeam ? rightTeam.score : 0;
+}
+
+function handleGameStart(startTime) {
+    if (!gameTimerTick) {
+        gameTimerTick = setInterval(() => {
+            updateGameTime(startTime);
+        }, 250);
+        document.getElementById("gameTime").style.color = "#fff";
+    } else {
+        console.warn("Game timer already running!");
+    }
+}
+
+function handleGameEnd(endTime) {
+    if (gameTimerTick) {
+        // updateGameTime(endTime);
+        clearInterval(gameTimerTick);
+        gameTimerTick = null;
+    }
+    document.getElementById("gameTime").style.color = "#ffbf00";
+    // Style the timer.
+}
+
+function updateGameTime(timestamp) {
+    // Convert timestamp to elapsed time
+    let elapsed = Date.now() - timestamp;
+    let minutes = Math.floor(elapsed / 60000);
+    let seconds = Math.floor((elapsed % 60000) / 1000);
+    document.getElementById("gameTime").textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateScores(scoreDict) {
+    document.getElementById("leftTeamScore").textContent = scoreDict.leftTeamScore;
+    document.getElementById("rightTeamScore").textContent = scoreDict.rightTeamScore;
 }
 
 function getContrastingTextColor(backgroundColor) {
@@ -190,7 +238,7 @@ function setGameDataTexts(teamData, pointsToWin, startTime) {
     // TODO: Check if this needs to be removed, it might be done via replicant which might be unnecessary.
     updateTeamData2(teamData);
 
-    document.getElementById("gameTime").textContent = "12:34";
+    document.getElementById("gameTime").textContent = "02:34";
     document.getElementById("pointsToWin").textContent = pointsToWin;
 }
 

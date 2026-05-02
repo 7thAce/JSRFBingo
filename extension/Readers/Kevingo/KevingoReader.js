@@ -1,6 +1,9 @@
 const WebSocket = require('ws');
 const fs = require('fs');
 
+const WS_SOURCE = "Kevingo Reader";
+const nodecgServer = new WebSocket('ws://localhost:7135');
+
 let argarray = [];
 process.argv.forEach(function (val, index, array) {
     console.log(index + ': ' + val);
@@ -13,7 +16,8 @@ const COLORS = Object.freeze({
     "#195BD7": "blue",
 	"#159C0E": "green",
 	"#FF69B4": "pink",
-	"#8013E0": "purple"
+	"#8013E0": "purple",
+    "#ffffff": "SERVER"
 });
 
 const LIGHTCOLORS = Object.freeze({
@@ -22,8 +26,13 @@ const LIGHTCOLORS = Object.freeze({
     "#4fd6ff": "blue",
     "#80ff93": "green",
     "#ff80fd": "pink",
-    "#a480ff": "purple"
+    "#a480ff": "purple",
+    "#ffffff": "SERVER"
 })
+
+nodecgServer.onopen = () => {
+    sendToServer("connect", "Connected");
+}
 
 kevingo = new WebSocket("wss://chut.kevcyg.net");
 
@@ -73,6 +82,15 @@ function processChat(jsonData) {
     let color = LIGHTCOLORS[jsonData["data"]["color"]];
     let message = jsonData["data"]["content"];
 
+    if (message == "GO!" && color == "SERVER") {
+        // send start game to server
+    }
+
+    if (message.toLowerCase() == "gg" && color != "blank") {
+        // send GG to server
+    }
+
+
     let outText = `<br>unix:${timestamp} <span style='color:${color};font-weight:bold'>${user}</span>: ${message}`;
     console.log(`${user}: ${message}`);
     if (message == "GO!") {
@@ -87,4 +105,13 @@ function processChat(jsonData) {
             return;
         }
     });
+}
+
+function sendToServer(type, message) {
+    websocket.send(JSON.stringify({
+        "source": WS_SOURCE,
+        "timestamp": Date.now(),
+        "type": type,
+        "message": message
+    }));
 }

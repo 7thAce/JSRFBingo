@@ -54,53 +54,62 @@ div {
 }
 
 .playerName {
-    width: 236px;
-    height: 35px;
-    font-size: 24px;
+    width: 359px;
+    height: 101px;
+    font-size: 70px;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
 }
 
 .playerPronouns {
-    width: 129px;
-    height: 25px;
-    font-size: 16px;
+    width: 296px;
+    height: 61px;
+    font-size: 40px;
+    padding-top: 8px;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
 }
 
 #leftTopPlayer {
-    left: 10px;
-    top: 510px;
+    left: 341px;
+    top: 727px;
 }
 
 #leftBottomPlayer {
-    left: 10px;
-    top: 1045px;
+    left: 1221px;
+    top: 727px;
 }
 
 #leftTopPronouns {
-    left: 252px;
-    top: 520px;
+    left: 4px;
+    top: 720px;
 }
 
 #leftBottomPronouns {
-    left: 252px;
-    top: 1055px;
+    left: 1620px;
+    top: 720px;
 }
 
 #rightTopPlayer {
+    visibility: hidden;
     left: 1679px;
     top: 510px;
 }
 
 #rightBottomPlayer {
+    visibility: hidden;
     left: 1679px;
     top: 1045px;
 }
 
 #rightTopPronouns {
+    visibility: hidden;
     left: 1539px;
     top: 520px;
 }
 
 #rightBottomPronouns {
+    visibility: hidden;
     left: 1539px;
     top: 1055px;
 }
@@ -124,8 +133,9 @@ div {
 }
 
 #gameTime {
-    left: 759px;
-    top: 116px;
+    left: 1260px;
+    top: 880px;
+    font-size: 60px;
 }
 
 #pointsToWin {
@@ -141,6 +151,7 @@ div {
     font-weight: bold;
     -webkit-text-stroke-width: 1.5px;
     -webkit-text-stroke-color: black;
+    visibility: hidden;
 }
 
 .teamScore {
@@ -167,6 +178,7 @@ div {
 #rightTeamScore {
     left: 1124px;
     top: 265px;
+    visibility: hidden;
 }
 
 #rightTeamName {
@@ -175,7 +187,7 @@ div {
 }
 
 #bgdiv {
-    background-image: url("gfx/s8_center_panel.png");
+    background-image: url("gfx/pinball_layout.png");
     /* background-image: url("gfx/s8_center_panel_coords.png"); */
     z-index: -10;
     width: 1920px;
@@ -189,10 +201,10 @@ div {
 #board {
     background-color: #000;
     font-weight: normal;
-    height: 476px;
-    width: 476px;
-    top: 337px;
-    left: 723px;
+    height: 467px;
+    width: 516px;
+    top: 609px;
+    left: 702px;
 
     display: inline-block;
     position: absolute;
@@ -202,8 +214,8 @@ div {
 }
 
 .square {
-    height: 94px;
-    width: 94px;
+    height: 92px;
+    width: 102px;
     position: relative;
     float: left;
     margin-top: 1px;
@@ -216,6 +228,7 @@ div {
 }
 
 .areaPoints {
+    visibility: hidden;
     display: flex;
     position: absolute;
     width: 30px;
@@ -244,6 +257,7 @@ div {
 }
 
 #eventFeed {
+    visibility: hidden;
     display: flex;
     left: 723px;
     top: 838px;

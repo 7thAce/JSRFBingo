@@ -6,6 +6,7 @@ const WS_SOURCE = "Dashboard"
 const websocket = new WebSocket("ws://localhost:7135");
 
 const teamsRep = nodecg.Replicant("teams", {defaultValue: {}, persistent: true});
+let teamsData = {};
 
 websocket.onopen = () => {
     console.log("Connected to WebSocket server.");
@@ -17,7 +18,7 @@ websocket.onclose = () => {
 };
 
 window.addEventListener('beforeunload', () => {
-    localStorage.setItem('teamDataSave', JSON.stringify(teamsRep.value));
+    localStorage.setItem('teamDataSave', JSON.stringify(teamsData));
 });
 
 window.addEventListener('load', () => {
@@ -120,9 +121,9 @@ function saveTeamInfo(team) {
         outputColor: document.getElementById(`${team.toLowerCase()}OutColor`).value,
         multiLink: document.getElementById(`${team.toLowerCase()}MultiLink`).value,
     };
-    teamsRep.value[`${team}Team`] = teamData;
+    teamsData[`${team}Team`] = teamData;
     console.log(`Saved ${team} team info:`, teamData);
-    sendToServer("team_data_update", teamsRep.value);
+    sendToServer("team_data_update", teamsData);
 }
 
 document.getElementById("saveLeftTeam").addEventListener("click", () => saveTeamInfo("Left"));

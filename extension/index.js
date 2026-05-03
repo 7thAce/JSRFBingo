@@ -34,8 +34,24 @@ const LEVELS = Object.freeze({
 	FRZ: "FRZ"
 });
 
-const EVENTS = Object.freeze({
-
+const EVENT_TYPES = Object.freeze({
+    START: "Start",
+    END: "End",
+    PAUSE: "Pause",
+    UNPAUSE: "Unpause",
+    MARK_SQUARE: "Mark Square",
+    UNMARK_SQUARE: "Unmark Square",
+    CHANGE_LOCATION: "Change Location",
+    COLLECT_TAPE: "Pick up Tape",
+    UNLOCK_SOUL: "Unlock Soul",
+    COLLECT_SOUL: "Pick up soul",
+    SPRAY_GRAFFITI: "Spray Graffiti",
+    COMPLETE_GRAFFITI: "Complete Graffiti",
+    CHARACTER_UNLOCK: "Unlock Character",
+    BINGO_SCORED: "Bingo Scored",
+    SNIPE: "Snipe",
+    CHAT: "Chat Message",
+    UNKNOWN: "Other/Unknown"
 });
 
 let currentBingoGame = null;
@@ -92,6 +108,9 @@ function publish(type, message) {
 ws_read.on('connection', function connection(ws) {
     subscribers.push(ws);
     console.log("Received client connection");
+    // Let's push a little more intelligently in the future.
+
+    publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     publish("game_state_update", currentBingoGame.toJson());
 
     ws.on('message', function incoming(message) {
@@ -118,6 +137,10 @@ ws_read.on('connection', function connection(ws) {
         // how do we show this DC on the dashboard? do we need to link the connection ws to a connection and then DC it?
     })
 });
+
+// function sendDataToConnection(connectionName) {
+    
+// }
 
 { // NodeCG listens block
 
@@ -295,7 +318,7 @@ function handleMessage(message) {
             return;
         case "chat_message":
             console.log("Received chat message.");
-            handleChatMessage(message["message"]); // Do we need to send more?
+            handleChatMessage(JSON.parse(message["message"])); // Do we need to send more?
             return;
         case "graffiti_sprayed":
             console.log("Received graffiti sprayed.");
@@ -358,10 +381,14 @@ function handleBoardUpdate(boardData) {
     Team.allTeamsBingoCount = 0;
     leftTeamData.countScore(currentBingoGame.board.board);
     rightTeamData.countScore(currentBingoGame.board.board);
+    currentBingoGame.calculateScoreToWin();
     publish("score_update", {
         "leftTeamScore": leftTeamData.score,
         "rightTeamScore": rightTeamData.score
     });
+
+    // let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
+    // publish("event_feed_update", eventsToInclude.filter(event => outputEventsList.includes(event.type)));
     return;
 }
 
@@ -404,7 +431,7 @@ function handleGameEnd() {
 
 function handleChatMessage(message) {
     let event = new GameEvent(EVENT_TYPES.CHAT, message["message"]);
-    publish("chat_message", message["message"]);
+    // publish("chat_message", message["message"]);
     return;
 }
 
@@ -454,6 +481,7 @@ function handleTeamDataUpdate(message) {
         let boardSquare = currentBingoGame.board.getSquareFromIndex(i);
 
         for (let team of currentBingoGame.teams) {
+            console.log("Current team is:",team);
             if (team.displayData.inputColor == boardSquare.inputColor) {
                 boardSquare.outputColor = team.displayData.outputColor;
                 // do we need a clear condition or do they all swap properly?
@@ -461,7 +489,10 @@ function handleTeamDataUpdate(message) {
         }
     }
     
-    publish("game_state_update", currentBingoGame.toJson());
+    console.log("Sending left team data");
+    console.log(leftTeamData);
+    publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
+    // publish("game_state_update", currentBingoGame.toJson());
     // TODO: Call update on board.
 }
 
@@ -582,26 +613,6 @@ function GetAreaFromLevel(level) {
         return "benten";
     }
 }
-
-const EVENT_TYPES = Object.freeze({
-    START: "Start",
-    END: "End",
-    PAUSE: "Pause",
-    UNPAUSE: "Unpause",
-    MARK_SQUARE: "Mark Square",
-    UNMARK_SQUARE: "Unmark Square",
-    CHANGE_LOCATION: "Change Location",
-    COLLECT_TAPE: "Pick up Tape",
-    UNLOCK_SOUL: "Unlock Soul",
-    COLLECT_SOUL: "Pick up soul",
-    SPRAY_GRAFFITI: "Spray Graffiti",
-    COMPLETE_GRAFFITI: "Complete Graffiti",
-    CHARACTER_UNLOCK: "Unlock Character",
-    BINGO_SCORED: "Bingo Scored",
-    SNIPE: "Snipe",
-    CHAT: "Chat Message",
-    UNKNOWN: "Other/Unknown"
-});
 
 class GameEvent {
     type = EVENT_TYPES.UNKNOWN;
@@ -777,6 +788,12 @@ class BingoGame {
         this.startTime = Date.now();
         let event = new GameEvent(EVENT_TYPES.START, {});
         publish("game_start", {"startTime": this.startTime});
+    }
+
+    endGame() {
+        this.inProgress = false;
+        let event = new GameEvent(EVENT_TYPES.END, {});
+        publish("game_end", {"endTime": Date.now()});
     }
 
     eventFeedToString(outputEventsList) {

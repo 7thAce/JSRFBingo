@@ -141,6 +141,7 @@ div {
 #pointsToWin {
     left: 1035px;
     top: 116px;
+    visibility: hidden;
 }
 
 .teamName {
@@ -156,17 +157,17 @@ div {
 
 .teamScore {
     display: flex;
-    width: 70px;
-    height: 38px;
-    font-size: 40px;
+    width: 213px;
+    height: 94px;
+    font-size: 100px;
     font-weight: bold;
     -webkit-text-stroke-width: 1.5px;
     -webkit-text-stroke-color: black;
 }
 
 #leftTeamScore {
-    left: 728px;
-    top: 209px;
+    left: 1221px;
+    top: 975px;
 }
 
 #leftTeamName {

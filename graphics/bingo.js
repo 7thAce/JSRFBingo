@@ -1,4 +1,3 @@
-// You can access the NodeCG api anytime from the `window.nodecg` object
 // Or just `nodecg` for short. Like this!:
 nodecg.log.info("Here we go now, on the offense.");
 const WS_SOURCE = "Display"
@@ -49,6 +48,18 @@ server_ws.addEventListener("message", (event) => {
             console.log("Received score update: ", messageData.message);
             updateScores(messageData.message);
             break;
+        case "location_update":
+            console.log("Received location update: ", messageData.message);
+            updateAllLocations(messageData.message);
+            break;
+        case "event_feed_update":
+            console.log("Received event feed update: ", messageData.message);
+            updateGameFeed(messageData.message);
+            break;
+        case "square_marked":
+            console.log("Received square marked: ", messageData.message);
+            // updateSquareVisuals(messageData.message);
+            break;
         case "ping":
             break;
         default:
@@ -58,45 +69,59 @@ server_ws.addEventListener("message", (event) => {
 
 });
 
-const teamsRep = nodecg.Replicant("teams");
-
-teamsRep.on("change", (newTeamsData) => {
-    console.log("Teams data updated: ", newTeamsData);
-    // updateTeamData(newTeamsData);
-});
-
 function updateTeamData(teamsData) {
     console.log("Teams data!");
     console.log(teamsData.leftTeam);
     if (teamsData["LeftTeam"]) {
         document.getElementById("leftTeamName").textContent = teamsData.LeftTeam.displayData.name;
-        document.getElementById("leftTeamScore").textContent = teamsData.LeftTeam.displayData.score;
+        document.getElementById("leftTeamScore").textContent = teamsData.LeftTeam.score;
     }
     if (teamsData["RightTeam"]) {
         document.getElementById("rightTeamName").textContent = teamsData.RightTeam.displayData.name;
-        document.getElementById("rightTeamScore").textContent = teamsData.RightTeam.displayData.score;
+        document.getElementById("rightTeamScore").textContent = teamsData.RightTeam.score;
     }
     
 }
 
 function updateTeamData2(teamsData) {
-    let leftTeam = teamsData[0];
-    let rightTeam = teamsData[1];
+    console.log("TEAMS DATA IS THIS BIG ANSWER")
+    console.log(teamsData);
+    let leftTeam = teamsData.leftTeam;
+    let rightTeam = teamsData.rightTeam;
+    // leftyTeam = teamsData[0];
+    // rightyTeam = teamsData[1];
+    // TODO: set player names
+    console.log("left team is");
+    console.log(leftTeam);
+
+    document.querySelector(":root").style.setProperty("--left-color", leftTeam.displayData.outputColor);
+    document.querySelector(":root").style.setProperty("--right-color", rightTeam.displayData.outputColor);
+    
     document.getElementById("leftTeamName").textContent = leftTeam.displayData.name;
-    document.getElementById("leftTeamScore").textContent = leftTeam.displayData.score;
+    document.getElementById("leftTopPlayer").textContent = leftTeam.displayData.player1.name;
+    document.getElementById("leftBottomPlayer").textContent = leftTeam.displayData.player2.name;
+    document.getElementById("leftTopPronouns").textContent = leftTeam.displayData.player1.pronouns;
+    document.getElementById("leftBottomPronouns").textContent = leftTeam.displayData.player2.pronouns;
+    document.getElementById("leftTeamScore").textContent = leftTeam.score;
 
     document.getElementById("rightTeamName").textContent = rightTeam.displayData.name;
-    document.getElementById("rightTeamScore").textContent = rightTeam.displayData.score;
+    document.getElementById("rightTopPlayer").textContent = rightTeam.displayData.player1.name;
+    document.getElementById("rightBottomPlayer").textContent = rightTeam.displayData.player2.name;
+    document.getElementById("rightTopPronouns").textContent = rightTeam.displayData.player1.pronouns;
+    document.getElementById("rightBottomPronouns").textContent = rightTeam.displayData.player2.pronouns;
+    document.getElementById("rightTeamScore").textContent = rightTeam.score;
 }
 
 function updateBoardVisuals(boardData, teamsData) {
+    console.log("UBV teams data is");
+    console.group(teamsData);
     for (let i = 0; i < 25; i++) {
         let rc = ArrayToGrid(i);
         let boardSquare = boardData.board[rc.row][rc.col];
-        console.log(boardSquare);
-        setSquareVisuals(boardSquare, rc, boardData.teams);
-        setGameDataTexts(teamsData, boardData.pointsToWin, 0);
+        setSquareVisuals(boardSquare, rc, teamsData);
     }
+    setGameDataTexts(teamsData, boardData.pointsToWin, 0);
+
 
     // Set score
     // const leftTeam = boardData.teams.find(t => t.id === "left");
@@ -106,14 +131,11 @@ function updateBoardVisuals(boardData, teamsData) {
 }
 
 function handleGameStart(startTime) {
-    if (!gameTimerTick) {
-        gameTimerTick = setInterval(() => {
-            updateGameTime(startTime);
-        }, 250);
-        document.getElementById("gameTime").style.color = "#fff";
-    } else {
-        console.warn("Game timer already running!");
-    }
+    clearInterval(gameTimerTick);
+    gameTimerTick = setInterval(() => {
+        updateGameTime(startTime);
+    }, 250);
+    document.getElementById("gameTime").style.color = "#fff";
 }
 
 function handleGameEnd(endTime) {
@@ -137,6 +159,14 @@ function updateGameTime(timestamp) {
 function updateScores(scoreDict) {
     document.getElementById("leftTeamScore").textContent = scoreDict.leftTeamScore;
     document.getElementById("rightTeamScore").textContent = scoreDict.rightTeamScore;
+}
+
+function createGameFeed() {
+
+}
+
+function updateAllLocations(locationDict) {
+    return;
 }
 
 function getContrastingTextColor(backgroundColor) {
@@ -179,13 +209,12 @@ function regionMark(boardSquare) {
     return "#fff";
 }
 
-function setSquareTextColor(boardSquare, teamsData) {
+function setSquareTextColor(boardSquare) {
     if (boardSquare.outputColor) {
         return getContrastingTextColor(boardSquare.outputColor);
     } else {
         return "#FFF";
     }
-
 }
 
 function setSquareVisuals(boardSquare, rc, teams) {
@@ -193,7 +222,7 @@ function setSquareVisuals(boardSquare, rc, teams) {
     let topText = "N/A";
     let midText = "No Data";
     let botText = "aaaNone";
-    
+
     basetext = boardSquare["text"];
     console.log("Base text is " + basetext);
 
@@ -220,13 +249,25 @@ function setSquareVisuals(boardSquare, rc, teams) {
 
     console.log("Setting text for square " + rc.row + ", " + rc.col + ": " + topText + " | " + midText);        
     
-    // TODO: Constrast - Format this different when we want contrast options!
-
     document.getElementById(`toptext${rc.row}${rc.col}`).textContent = topText;
-    document.getElementById(`toptext${rc.row}${rc.col}`).style.color = regionMark(boardSquare, teams);
+    document.getElementById(`toptext${rc.row}${rc.col}`).style.color = regionMark(boardSquare);
     document.getElementById(`midtext${rc.row}${rc.col}`).textContent = midText;
-    document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare, teams); // Set to contrast.
-    document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor;
+    document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare); // Set to contrast.
+    document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor; //maybe change to class system
+
+    animateSquareMark(rc, boardSquare.outputColor, teams);
+}
+
+function animateSquareMark(rc, outputColor, teams) {
+    console.log("TEAMS IN ANIMATE");
+    console.log(teams);
+    if (teams.leftTeam.displayData.outputColor == outputColor) {
+        document.getElementById(`square${rc.row}${rc.col}`).classList.add("squareanimationleft");
+    } else if (teams.rightTeam.displayData.outputColor == outputColor) {
+        document.getElementById(`square${rc.row}${rc.col}`).classList.add("squareanimationright");
+    } else {
+        document.getElementById(`square${rc.row}${rc.col}`).classList.remove("squareanimationleft", "squareanimationright");
+    }   
 }
 
 /*
@@ -234,11 +275,10 @@ function setSquareVisuals(boardSquare, rc, teams) {
 */
 
 function setGameDataTexts(teamData, pointsToWin, startTime) {
-    console.log(teamData);
     // TODO: Check if this needs to be removed, it might be done via replicant which might be unnecessary.
     updateTeamData2(teamData);
 
-    document.getElementById("gameTime").textContent = "02:34";
+    // document.getElementById("gameTime").textContent = "02:34";
     document.getElementById("pointsToWin").textContent = pointsToWin;
 }
 
@@ -251,7 +291,14 @@ function updateGameState(gameState) {
     // calcPointsPerArea(gameState.board);
     // updateGameFeed(gameState.gameFeed);
     // checkForGameSet(gameState.teams); //maybe?
-    updateBoardVisuals(gameState.board, gameState.teams);
+    if (gameState.inProgress) {
+        if (!gameTimerTick) {
+            handleGameStart(gameState.startTime);
+        }
+    }
+    console.log("Think it's a ref");
+    console.log(gameState);
+    updateBoardVisuals(gameState.board, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
 }
 
 function ArrayToGrid(index) {

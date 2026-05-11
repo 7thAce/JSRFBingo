@@ -112,6 +112,7 @@ ws_read.on('connection', function connection(ws) {
 
     publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     publish("game_state_update", currentBingoGame.toJson());
+    publish("game_start", currentBingoGame.startTime);
 
     ws.on('message', function incoming(message) {
         // console.log(message);
@@ -281,7 +282,7 @@ function handleMessage(message) {
             handleNewBoard(message["message"]);
             return;
         case "board_update":
-            console.log("Received board update."); // AQUI?
+            console.log("Received board update.");
             handleBoardUpdate(message["message"]);
             return;
         case "player_connect":
@@ -302,7 +303,7 @@ function handleMessage(message) {
             return;
         case "start_game":
             console.log("Starting the game!");
-            handleGameStart();
+            handleGameStart(message["message"]);
             return;
         case "pause_game":
             console.log("Pausing the game!");
@@ -355,7 +356,7 @@ function handleMessage(message) {
             handleAutomarkerForward(message["message"]);
             return;
         default:
-            console.log(`!! Received unhandled message type ${message["type"]}.`);
+            console.warn(`!! Received unhandled message type ${message["type"]}.`);
             return;
     }
     // This will handle *every* incoming message from multinode, dashboard, board, etc.
@@ -382,13 +383,15 @@ function handleBoardUpdate(boardData) {
     leftTeamData.countScore(currentBingoGame.board.board);
     rightTeamData.countScore(currentBingoGame.board.board);
     currentBingoGame.calculateScoreToWin();
+
+    // TODO: Calculate Max Score for each team, then compare max to current and see if the game should end.
     publish("score_update", {
         "leftTeamScore": leftTeamData.score,
         "rightTeamScore": rightTeamData.score
     });
 
-    // let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
-    // publish("event_feed_update", eventsToInclude.filter(event => outputEventsList.includes(event.type)));
+    let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
+    publish("event_feed_update", eventsToInclude.filter(event => event.includes(event.type)));
     return;
 }
 
@@ -406,14 +409,24 @@ function handlePlayerNameChange(playerData) {
 }
 
 function handlePlayerLocationChange(playerData) {
-    let event = new GameEvent(EVENT_TYPES.CHANGE_LOCATION, playerData);
-    // Set data.
-    publish("player_location_change", currentBingoGame.teams);
+        //     "teamID": teamObj.multiID,
+        // "levelID": levelID,
+        // "player": teamObj.players[playerIndex]
+    console.log("player location change data:");
+    console.log(playerData);
+
+    let playerObj = getPlayerObjFromName(playerData.player.name);
+    playerObj.location = GetLevelFromID(playerData.levelID);
+    playerObj.enterTime = Date.now();
+    let event = new GameEvent(EVENT_TYPES.CHANGE_LOCATION, playerObj);
+
+    determinePlayerSplits(playerObj);
+    publish("player_location_change", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
     return;
 }
 
-function handleGameStart() {
-    currentBingoGame.startGame();
+function handleGameStart(startTime=Date.now()) {
+    currentBingoGame.startGame(startTime);
 }
 
 function handleGamePause() {
@@ -447,13 +460,21 @@ function handleGraffitiCompleted(graffitiData) { // Entire level
 // 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
 // 	kevingoSocket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
 // }
+// Do we need to send team data?
     let event = new GameEvent(EVENT_TYPES.COMPLETE_GRAFFITI, graffitiData);
     // update team data with new graf info
     return;
 }
 
 function handleTapePickup(tapeData) {
+    let teamID = tapeData.teamID;
+    if (leftTeamData.name == teamID) {
+        leftTeamData.tapeData.push(GetTapeFromID(tapeData.tapeID));
+    } else if (rightTeamData.name == teamID) {
+        rightTeamData.tapeData.push(GetTapeFromID(tapeData.tapeID));
+    }
     let event = new GameEvent(EVENT_TYPES.COLLECT_TAPE, tapeData);
+    publish("tape_collect", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
     return;
 }
 
@@ -497,6 +518,7 @@ function handleTeamDataUpdate(message) {
 }
 
 function handleKillCombo(message) {
+    // do we just want to gen a new game and set the teams?
     return;
 }
 
@@ -504,6 +526,32 @@ function handleAutomarkerForward(message) {
     console.log("I'll forward this in the future.");
     // kevingoServer.send("automarker_forward", message["message"]);
     return;
+}
+
+function determinePlayerSplits(enteringPlayerData) {
+    if (!enteringPlayerData) {
+        console.log("determinePlayerSplits called without entering player data.");
+        return;
+    }
+    console.log("Current Game is:");
+    console.log(currentBingoGame);
+    console.log("teams data is:");
+    console.log(currentBingoGame.teams[0]);
+    
+    let otherPlayers = [currentBingoGame.teams[0].displayData.player1, currentBingoGame.teams[0].displayData.player2, currentBingoGame.teams[1].displayData.player1, currentBingoGame.teams[1].displayData.player2];
+    // I think this works how I want it to, but I might need a check.
+    otherPlayers = otherPlayers.filter(player => player != enteringPlayerData);
+
+    otherPlayers.forEach(player => {
+        if (player.location == enteringPlayerData.location) {
+            console.log(`Detected ${player.name} in the same location as ${enteringPlayerData.name}.`);
+            publish("player_split", {"ahead": {"player": player.name, "enterTime": player.enterTime}, "behind": {"player": enteringPlayerData.name, "enterTime": enteringPlayerData.enterTime}});
+            // let event = new GameEvent("PLAYER_SPLIT", {});
+            // TODO: We need to handle 3+ people by sending not ahead and behind, but all players in the location and their timestamps.
+        } else {
+            console.log(`Detected ${player.name} in different locations as ${enteringPlayerData.name}.`);
+        }
+    });
 }
 
 function archiveCurrentGame() {
@@ -542,6 +590,7 @@ function archiveCurrentGame() {
 
 // TODO: Check that boarddata is sent the same way. We might have to handle bingosync and kevingo differently.
 function setBoardData(boardData) {
+    let unclaimedSquareCount = 0;
     console.log("Board data is...");
     console.log(boardData);
     // Reset operations
@@ -567,10 +616,14 @@ function setBoardData(boardData) {
         }
         if (boardSquare.inputColor == "blank") {
             boardSquare.outputColor = null;
+            unclaimedSquareCount += 1;
         }
     }
     currentBingoGame.board.printBoardState(currentBingoGame.teams);
     publish("game_state_update", currentBingoGame.toJson());
+    if (unclaimedSquareCount == 0) {
+        publish("end_game", {});
+    }
 }
 
 (function pingTimer() {
@@ -687,17 +740,19 @@ class GameEvent {
     }
 }
 
-class Snipe {
+class Split {
     sniper = null;
     sniped = null;
+    // Description?
     square = null;
     timeDiff = 0;
 
-    constructor (_sniper, _sniped, _square, _timeDiff) {
-        this.sniper = _sniper;
-        this.sniped = _sniped;
-        this.square = _square;
-        this.timeDiff = _timeDiff;
+
+    constructor(eventSnipedEvent, eventSniperEvent) {
+        this.sniper = eventSniperEvent.data.player;
+        this.sniped = eventSnipedEvent.data.player;
+        this.square = eventSnipedEvent.data.square;
+        this.timeDiff = eventSniperEvent.timestamp - eventSnipedEvent.timestamp;
     }
 }
 
@@ -826,14 +881,14 @@ class BingoGame {
     }
 }
 
-class GameFeed {
-    lineCount = 100;
-    lines = [];
+// class GameFeed {
+//     lineCount = 0;
+//     lines = [];
 
-    createLinesFromEvents(events) {
-        return;
-    }
-}
+//     createLinesFromEvents(events) {
+//         return;
+//     }
+// }
 
 class Team {
     static allTeamsBingoCount = 0;
@@ -849,6 +904,7 @@ class Team {
 
     // Game Data
     levels = [];
+    tapeData = [];
     ownedSquares = [];
     score = 0;
     maxScore = 0;
@@ -931,22 +987,56 @@ class Team {
         }
     }
 
+    static getTeamFromID(id) {
+        if (leftTeamData.id == id) {
+            return leftTeamData;
+        } else if (rightTeamData.id == id) {
+            return rightTeamData;
+        }
+        return null;
+    }
+
     toJson() {
         return JSON.stringify(this);
     }
 }
 
 class Player {
+    streamLocation = null;
     location = null;
     enterTime = 0;
     currentSplit = null;
     name = "";
     pronouns = "";
     feed = [];
+    // we might need board location stuff so we can send it.
 
     constructor(_playerData) {
         {};
     }
+}
+
+function getPlayerObjFromName(playerName) {
+    console.log("left team data is:");
+    console.log(leftTeamData);
+    console.log("right team data is:");
+    console.log(rightTeamData);
+    if (leftTeamData) {
+        if (leftTeamData.displayData.player1.name == playerName) {
+            return leftTeamData.displayData.player1;
+        } else if (leftTeamData.displayData.player2.name == playerName) {
+            return leftTeamData.displayData.player2;
+        }
+    }
+    if (rightTeamData) {
+        if (rightTeamData.displayData.player1.name == playerName) {
+            return rightTeamData.displayData.player1;
+        } else if (rightTeamData.displayData.player2.name == playerName) {
+            return rightTeamData.displayData.player2;
+        }
+    }
+    console.warn(`Could not find player ${playerName} on a team!.`);
+    return null;
 }
 
 class Square {

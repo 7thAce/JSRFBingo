@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.2"
+   viewBox="0 0 720 540"
+   width="720"
+   height="540"
+   id="svg1"
+   sodipodi:docname="chevrons.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.6355118"
+     inkscape:cx="104.55443"
+     inkscape:cy="136.04304"
+     inkscape:window-width="3377"
+     inkscape:window-height="1417"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Folder 3" />
+  <title
+     id="title1">chevrons</title>
+  <style
+     id="style1">
+		.s0 { fill:rgb(151, 151, 151) } 
+		.s1 { fill: none;stroke: #000000;stroke-miterlimit:100;stroke-width: 1.5 } 
+		.s2 { fill: #888888 } 
+		.s3 { fill: none;stroke: #000000;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+		.s4 { fill: #ade700 } 
+		.s5 { fill: none;stroke: #000000;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 3 } 
+	</style>
+  <g
+     id="Bottom"
+     style="display:inline">
+    <g
+       id="Tape">
+      <path
+         id="Shape 127 copy"
+         class="s2"
+         d="M 0,106 V 56 H 68.1 L 84,81 68.1,106 Z" />
+      <path
+         id="Shape 5 copy"
+         class="s1"
+         d="m 26.4,59.1 38.9,16.2 c 0.7,0.4 1.1,1.3 0.8,2.1 l -10.4,24.9 c -0.4,0.7 -1.3,1.1 -2.1,0.8 L 14.7,86.9 C 13.9,86.5 13.6,85.6 13.9,84.8 L 24.3,60 c 0.4,-0.8 1.3,-1.2 2.1,-0.9 z m 5.6,17.8 3.1,1.3 1.2,-3.1 9.2,3.7 -1.3,3.1 -6.2,-2.5 -0.6,1.5 -2.1,5 3.3,1.3 1.4,-3.4 6,2.5 3.9,-9.3 -15.4,-6.3 z m 1,14.9 3.2,1.3 1.3,-3.1 -3.3,-1.3 z m 3.4,-26.2 c 0,-0.6 -0.4,-1 -1,-1 -0.5,0 -0.9,0.4 -0.9,1 0,0.5 0.4,0.9 0.9,0.9 0.6,0 1,-0.4 1,-0.9 z m 4.7,3.7 c 0,-0.5 -0.5,-0.9 -1,-0.9 -0.5,0 -0.9,0.4 -0.9,0.9 0,0.5 0.4,0.9 0.9,0.9 0.5,0 1,-0.4 1,-0.9 z m 7.7,3.4 c 0,-0.6 -0.4,-1 -0.9,-1 -0.5,0 -0.9,0.4 -0.9,1 0,0.5 0.4,0.9 0.9,0.9 0.5,0 0.9,-0.4 0.9,-0.9 z m 6.3,0.3 c 0,-0.5 -0.4,-0.9 -0.9,-0.9 -0.5,0 -1,0.4 -1,0.9 0,0.6 0.5,1 1,1 0.5,0 0.9,-0.4 0.9,-1 z M 28.9,62.9 C 28.9,61.8 28,61 27,61 c -1,0 -1.9,0.8 -1.9,1.9 0,1 0.9,1.8 1.9,1.8 1,0 1.9,-0.8 1.9,-1.8 z m 35,15 C 63.9,76.8 63,76 62,76 c -1,0 -1.9,0.8 -1.9,1.9 0,1 0.9,1.8 1.9,1.8 1,0 1.9,-0.8 1.9,-1.8 z" />
+    </g>
+  </g>
+</svg>

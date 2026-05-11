@@ -105,6 +105,98 @@ div {
     top: 1055px;
 }
 
+/* HUD boxes */
+
+#topLeftHUD {
+    top: 0px;
+    left: 0px;
+}
+
+#bottomLeftHUD {
+    top: 535px;
+    left: 0px;
+}
+
+#topRightHUD {
+    top: 0px;
+    left: 1199px;
+}
+
+#bottomRightHUD {
+    top: 535px;
+    left: 1199px;
+}
+
+.location {
+    background-image: url('gfx/chevronLocation.svg');
+    padding-left: 5px;
+    font-size: 23px;
+    padding-top: 18px;
+    z-index: -15;
+}
+
+.split {
+    background-image: url('gfx/chevronDuration.svg');
+    padding-left: 195px;
+    font-size: 26px;
+    padding-top: 16px;
+    color: #CC0000;
+    z-index: -15;
+}
+
+.duration {
+    background-image: url('gfx/chevronDuration.svg');
+    padding-left: 198px;
+    font-size: 28px;
+    padding-top: 16px;
+    z-index: -15;
+}
+
+.tape {
+    background-image: url('gfx/chevronNoTape.svg');
+    z-index: -15;
+}
+
+.graffitiProgress {
+    background-image: url('gfx/chevronGraffiti.svg');
+    padding-left: 133px;
+    font-size: 32px;
+    padding-top: 61px;
+    z-index: -15;
+}
+
+.chevron {
+    top: 0px;
+    left: 5px;
+    height: 150px;
+    width: 300px;
+    position: absolute;
+    font-weight: bold;
+    font-family: "Bai Jamjuree";
+    transition: left 1s ease-in-out;
+    text-align: left;
+    color: black;
+}
+
+.retractedLeftShort {
+    left: -137px;
+}
+
+.retractedLeftLong {
+    left: -161px;
+}
+
+#leftDuration {
+    transition: left 1s ease-in-out;
+}
+
+#rightDuration {
+    transition: right 1s ease-in-out;
+}
+
+
+
+
 .infoBox {
     display: flex;
     font-weight: bold;

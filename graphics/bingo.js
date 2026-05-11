@@ -3,6 +3,7 @@ nodecg.log.info("Here we go now, on the offense.");
 const WS_SOURCE = "Display"
 const server_ws = new WebSocket("ws://localhost:7135");
 let gameTimerTick = null;
+players = {};
 
 function sendToServer(type, message) {
     server_ws.send(JSON.stringify({
@@ -32,6 +33,10 @@ server_ws.addEventListener("message", (event) => {
             console.log("Received game state update: ", messageData.message);
             updateGameState(JSON.parse(messageData.message));
             break;
+        case "tape_update":
+            console.log("Received tape data update: ", messageData.message);
+            updateTapeData(messageData.message);
+            break;
         case "team_data_update":
             console.log("Received team data update: ", messageData.message);
             updateTeamData2(messageData.message);
@@ -48,26 +53,44 @@ server_ws.addEventListener("message", (event) => {
             console.log("Received score update: ", messageData.message);
             updateScores(messageData.message);
             break;
-        case "location_update":
+        case "player_location_change":
             console.log("Received location update: ", messageData.message);
             updateAllLocations(messageData.message);
             break;
+        case "player_split":
+            console.log("Received player split: ", messageData.message);
+            displaySplitData(messageData.message);
+            break;
         case "event_feed_update":
             console.log("Received event feed update: ", messageData.message);
-            updateGameFeed(messageData.message);
+            createGameFeed(messageData.message);
             break;
         case "square_marked":
             console.log("Received square marked: ", messageData.message);
             // updateSquareVisuals(messageData.message);
             break;
+        case "game_feed":
+            console.log("Received game feed event: ", messageData.message);
+            createGameFeed(messageData.message);
+            break;
         case "ping":
             break;
         default:
-            console.log("Received unknown message type: ", messageData.type);
+            console.log(`Received unknown message type: [${messageData.type}]`);
             break;
     }
 
 });
+
+class DisplayPlayer {
+    location = "GarageD";
+    enterTime = 0;
+    name = "";
+
+    constructor(name) {
+        this.name = name;
+    }
+}
 
 function updateTeamData(teamsData) {
     console.log("Teams data!");
@@ -94,8 +117,16 @@ function updateTeamData2(teamsData) {
     console.log("left team is");
     console.log(leftTeam);
 
+    console.log("right team is");
+    console.log(rightTeam);
+
+
     document.querySelector(":root").style.setProperty("--left-color", leftTeam.displayData.outputColor);
     document.querySelector(":root").style.setProperty("--right-color", rightTeam.displayData.outputColor);
+    const leftSvgShape = document.querySelector("#leftTeamSVG .leftColor");
+    const rightSvgShape = document.querySelector("#rightTeamSVG .rightColor");
+    document.querySelector("#leftTeamSVG .leftColor").style.fill = leftTeam.displayData.outputColor;
+    document.querySelector("#rightTeamSVG .rightColor").style.fill = rightTeam.displayData.outputColor;
     
     document.getElementById("leftTeamName").textContent = leftTeam.displayData.name;
     document.getElementById("leftTopPlayer").textContent = leftTeam.displayData.player1.name;
@@ -110,6 +141,55 @@ function updateTeamData2(teamsData) {
     document.getElementById("rightTopPronouns").textContent = rightTeam.displayData.player1.pronouns;
     document.getElementById("rightBottomPronouns").textContent = rightTeam.displayData.player2.pronouns;
     document.getElementById("rightTeamScore").textContent = rightTeam.score;
+
+    if (players["tl"]?.name != leftTeam.displayData.player1.name) {
+        players["tl"] = new DisplayPlayer(leftTeam.displayData.player1);
+        players["tl"].elements = {
+            location: document.getElementById("tlLocation"),
+            duration: document.getElementById("tlDuration"),
+            tape: document.getElementById("tlTape"),
+            graffiti: document.getElementById("tlGraffiti"),
+            split: document.getElementById("tlSplit")
+        }
+    }
+
+    if (players["bl"]?.name != leftTeam.displayData.player2.name) {
+        players["bl"] = new DisplayPlayer(leftTeam.displayData.player2);
+        players["bl"].elements = {
+            location: document.getElementById("blLocation"),
+            duration: document.getElementById("blDuration"),
+            tape: document.getElementById("blTape"),
+            graffiti: document.getElementById("blGraffiti"),
+            split: document.getElementById("blSplit")
+        }
+    }
+
+    if (players["tr"]?.name != rightTeam.displayData.player1.name) {
+        players["tr"] = new DisplayPlayer(rightTeam.displayData.player1);
+        players["tr"].elements = {
+            location: document.getElementById("trLocation"),
+            duration: document.getElementById("trDuration"),
+            tape: document.getElementById("trTape"),
+            graffiti: document.getElementById("trGraffiti"),
+            split: document.getElementById("trSplit")
+        }
+    }
+
+    if (players["br"]?.name != rightTeam.displayData.player2.name) {
+        players["br"] = new DisplayPlayer(rightTeam.displayData.player2);
+        players["br"].elements = {
+            location: document.getElementById("brLocation"),
+            duration: document.getElementById("brDuration"),
+            tape: document.getElementById("brTape"),
+            graffiti: document.getElementById("brGraffiti"),
+            split: document.getElementById("brSplit")
+        }
+    }
+
+    console.log("After updateTeamsData:");
+    console.log(players);
+
+    displayPlayerLocations();
 }
 
 function updateBoardVisuals(boardData, teamsData) {
@@ -134,6 +214,7 @@ function handleGameStart(startTime) {
     clearInterval(gameTimerTick);
     gameTimerTick = setInterval(() => {
         updateGameTime(startTime);
+        updatePlayerLocationDurations();
     }, 250);
     document.getElementById("gameTime").style.color = "#fff";
 }
@@ -156,17 +237,102 @@ function updateGameTime(timestamp) {
     document.getElementById("gameTime").textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
+function displayPlayerLocations() {
+    Object.entries(players).forEach(([key, value]) => {
+        console.log(key + " is in location " + value.location);
+        document.getElementById(`${key}Location`).textContent = value.location;
+    });
+}
+
 function updateScores(scoreDict) {
     document.getElementById("leftTeamScore").textContent = scoreDict.leftTeamScore;
     document.getElementById("rightTeamScore").textContent = scoreDict.rightTeamScore;
 }
 
-function createGameFeed() {
-
+function createGameFeed(allEvents) {
+    let innerHTML = [];
+    allEvents.forEach(event => {
+        if (event.sectionalArray.length > 2) { // Not Start End Pause events
+            // Player data is the 2nd one
+            event.sectionalArray[1] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[1] + "</style>";
+            // We should *really* change this based on type, but we'll deal with that problem later.
+            event.sectionalArray[2] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[2] + "</style>";
+            event.sectionalArray[4] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[3] + "</style>";
+        }
+        event.outText = event.join(" ");
+    });    
+    innerHTML = allEvents.map(event => event.outText).join("\n");
+    console.log("Game feed inner HTML is: " + innerHTML);
+    document.getElementById("eventFeed").innerHTML = innerHTML;
 }
 
 function updateAllLocations(locationDict) {
-    return;
+    console.log("all location call");
+    console.log(locationDict);
+    players["tl"].location = locationDict.leftTeam.displayData.player1.location || "Pending...";
+    players["bl"].location = locationDict.leftTeam.displayData.player2.location || "Pending...";
+    players["tr"].location = locationDict.rightTeam.displayData.player1.location || "Pending...";
+    players["br"].location = locationDict.rightTeam.displayData.player2.location || "Pending...";
+    players["tl"].enterTime = locationDict.leftTeam.displayData.player1.enterTime || 1778471026142;
+    players["bl"].enterTime = locationDict.leftTeam.displayData.player2.enterTime || 1778471026142;
+    players["tr"].enterTime = locationDict.rightTeam.displayData.player1.enterTime || 1778471026142;
+    players["br"].enterTime = locationDict.rightTeam.displayData.player2.enterTime || 1778471026142;
+    updateTapeData(locationDict);
+    displayPlayerLocations();
+}
+
+function updateTapeData(tapeTeamsDict) {
+    if (tapeTeamsDict.leftTeam.tapeData.includes(players["tl"].location)) { 
+        players["tl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    } else {
+        players["tl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    }
+
+    if (tapeTeamsDict.leftTeam.tapeData.includes(players["bl"].location)) { 
+        players["bl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    } else {
+        players["bl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    }
+
+    if (tapeTeamsDict.rightTeam.tapeData.includes(players["tr"].location)) { 
+        players["tr"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    } else {
+        players["tr"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    }
+    if (tapeTeamsDict.rightTeam.tapeData.includes(players["br"].location)) { 
+        players["br"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    } else {
+        players["br"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+    }
+}
+
+function updatePlayerLocationDurations() {
+    Object.entries(players).forEach(([key, player]) => {
+        let DISPLAYTIME = 1000;
+        let duration = Date.now() - player.enterTime;
+        console.log(`Duration: ${duration} || Player enter time: ${player.enterTime} || Now: ${Date.now()}`);
+        player.elements.duration.textContent = timestampToString(duration, "%m:%s");
+        if (duration >= DISPLAYTIME && player.elements.location.textContent != "Garage") {
+            player.elements.duration.classList.remove("retractedLeftShort");
+        } else {
+            player.elements.duration.classList.add("retractedLeftShort");
+        }
+        if (duration >= 15000) {
+            player.elements.split.classList.add("retractedLeftShort");
+        }
+    });
+}
+
+function displaySplitData(splitData) {
+    Object.entries(players).forEach(([key, player]) => {
+        if (player.name == splitData.ahead.player) {
+            player.elements.split.textContent = `First!`;
+            player.elements.split.classList.remove("retractedLeftShort");
+        } else if (player.name == splitData.behind.player) {
+            player.elements.split.textContent = "Diff"
+            player.elements.split.classList.remove("retractedLeftShort");
+        }
+    });
 }
 
 function getContrastingTextColor(backgroundColor) {
@@ -187,6 +353,24 @@ function getContrastingTextColor(backgroundColor) {
 
     // Return white text for dark backgrounds, black text for light backgrounds
     return L > 0.5 ? "#000" : "#fff";
+}
+
+function timestampToString(timestampMS, dateFormat = "[%m:%s]") {
+    // We're going to use a basic implementation where:
+    // %m is minutes, %s is seconds, %i is milliseconds.
+
+    let minutes = Math.floor(timestampMS / 60000);
+    let seconds = Math.floor((timestampMS % 60000) / 1000);
+    let milliseconds = timestampMS % 1000;
+    let centiseconds = Math.round(milliseconds / 10, 0);
+
+    minutes = String(minutes); //.padStart(2, '0');
+    seconds = String(seconds).padStart(2, '0');
+    milliseconds = String(milliseconds).padStart(3, '0');
+    centiseconds = String(centiseconds).padStart(2, '0');
+
+    let dateString = dateFormat.replace("%m", minutes).replace("%s", seconds).replace("%i", milliseconds).replace("%c", centiseconds);
+    return dateString;
 }
 
 function regionMark(boardSquare) { 
@@ -254,7 +438,6 @@ function setSquareVisuals(boardSquare, rc, teams) {
     document.getElementById(`midtext${rc.row}${rc.col}`).textContent = midText;
     document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare); // Set to contrast.
     document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor; //maybe change to class system
-
     animateSquareMark(rc, boardSquare.outputColor, teams);
 }
 
@@ -291,6 +474,9 @@ function updateGameState(gameState) {
     // calcPointsPerArea(gameState.board);
     // updateGameFeed(gameState.gameFeed);
     // checkForGameSet(gameState.teams); //maybe?
+
+    // Note that this isn't good because if we change the format in one place, we won't change it here.
+    // On that end, we should, in the future request the data from the server rather than GIMME ALL.
     if (gameState.inProgress) {
         if (!gameTimerTick) {
             handleGameStart(gameState.startTime);
@@ -299,6 +485,8 @@ function updateGameState(gameState) {
     console.log("Think it's a ref");
     console.log(gameState);
     updateBoardVisuals(gameState.board, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
+    updateAllLocations({"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]})
+
 }
 
 function ArrayToGrid(index) {

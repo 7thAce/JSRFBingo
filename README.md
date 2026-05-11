@@ -5,9 +5,9 @@ Right now, this is one bundle called jsrf-bingo-s-8, which leads to the idea of 
 
 Goals:
 - [10%] Redo the dashboard. *Everything* in normal operations should be doable from the dashboard. 
-- [5%] Convert as much stuff to SVG as possible to control it through JS.
-- [35%] Rewrite bingo.js (the display page). It's awful.
-- [60%] Centralize everything into a server that fully understands the gamestate and sends out events through websockets.
+- [100%] Convert as much stuff to SVG as possible to control it through JS.
+- [90%] Rewrite bingo.js (the display page). It's awful.
+- [80%] Centralize everything into a server that fully understands the gamestate and sends out events through websockets.
 - [0%] Standings screen.
 - Enable variations such as pinball to stand alone in either their own bundles or own files.
 

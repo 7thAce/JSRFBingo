@@ -69,6 +69,7 @@ function launchClient() {
 function launchGameReader() {
     console.log("Launching Game Reader...");
     nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("leftMultiLink").value});
+    nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
 }
 
 function launchAutomarker() {

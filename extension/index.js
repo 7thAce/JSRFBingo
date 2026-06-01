@@ -47,6 +47,7 @@ const EVENT_TYPES = Object.freeze({
     COLLECT_SOUL: "Pick up soul",
     SPRAY_GRAFFITI: "Spray Graffiti",
     COMPLETE_GRAFFITI: "Complete Graffiti",
+    COMPLETE_LEVEL_GRAFFITI: "Complete Level Graffiti",
     CHARACTER_UNLOCK: "Unlock Character",
     BINGO_SCORED: "Bingo Scored",
     SNIPE: "Snipe",
@@ -95,7 +96,7 @@ function publish(type, message) {
         "message": message,
     };
     if (type != "ping") {
-        console.log(` <- [${wsSend["source"]} @ ${formatNow(wsSend["timestamp"])}] ${wsSend["type"]}: ${wsSend["message"]}`);
+        // console.log(` <- [${wsSend["source"]} @ ${formatNow(wsSend["timestamp"])}] ${wsSend["type"]}: ${wsSend["message"]}`);
     }
 
     subscribers.forEach(client => {
@@ -112,12 +113,10 @@ ws_read.on('connection', function connection(ws) {
 
     publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     publish("game_state_update", currentBingoGame.toJson());
-    publish("game_start", currentBingoGame.startTime);
+    // publish("game_start", currentBingoGame.startTime);
 
     ws.on('message', function incoming(message) {
-        // console.log(message);
         try {
-            console.log(message);
             let jsonMessage = JSON.parse(message);
             console.log(` -> [${jsonMessage["source"]} @ ${getNow()}] ${jsonMessage["type"]}: ${jsonMessage["message"]}`);
             // handleIncomingMessageDelay(jsonMessage["delay"], jsonMessage);
@@ -178,12 +177,9 @@ module.exports = function(nodecg) {
 
     nodecg.listenFor('launch-game-reader', (idData) => {
         nodecg.log.info("Launching Game Reader!");
-        console.log(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
         gameReader = launchGameReader(idData.id);
         // TODO: Store the game reader to the left or right team based on ID.
         // Alternatively, we can just send left or right and grab the ID from the team object.
-        console.log("Game reader return:");
-        console.log(gameReader);
     });
 
 
@@ -303,7 +299,7 @@ function handleMessage(message) {
             return;
         case "start_game":
             console.log("Starting the game!");
-            handleGameStart(message["message"]);
+            handleGameStart(message["message"]["start_time"]);
             return;
         case "pause_game":
             console.log("Pausing the game!");
@@ -321,9 +317,17 @@ function handleMessage(message) {
             console.log("Received chat message.");
             handleChatMessage(JSON.parse(message["message"])); // Do we need to send more?
             return;
-        case "graffiti_sprayed":
+        case "square_marked":
+            console.log("Received square marked.");
+            handleSquareMark(JSON.parse(message["message"]));
+            break;
+        case "square_unmarked":
+            console.log("Received square unmarked.");
+            handleSquareUnmark(JSON.parse(message["message"]));
+            break;
+        case "tag_sprayed":
             console.log("Received graffiti sprayed.");
-            handleGraffitiSprayed(message["message"]);
+            handleTagSprayed(message["message"]);
             return;
         case "graffiti_completed":
             console.log("Received graffiti completed.");
@@ -391,7 +395,9 @@ function handleBoardUpdate(boardData) {
     });
 
     let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
-    publish("event_feed_update", eventsToInclude.filter(event => event.includes(event.type)));
+    let filteredEvents = currentBingoGame.events.filter(event => eventsToInclude.includes(event.type));
+    filteredEvents.forEach(event => event.toDisplayText({"timeFormat": "%m:%s"}));
+    publish("event_feed_update", filteredEvents);
     return;
 }
 
@@ -409,23 +415,18 @@ function handlePlayerNameChange(playerData) {
 }
 
 function handlePlayerLocationChange(playerData) {
-        //     "teamID": teamObj.multiID,
-        // "levelID": levelID,
-        // "player": teamObj.players[playerIndex]
-    console.log("player location change data:");
-    console.log(playerData);
-
     let playerObj = getPlayerObjFromName(playerData.player.name);
-    playerObj.location = GetLevelFromID(playerData.levelID);
+    playerObj.location = getLevelFromID(playerData.levelID);
     playerObj.enterTime = Date.now();
     let event = new GameEvent(EVENT_TYPES.CHANGE_LOCATION, playerObj);
 
     determinePlayerSplits(playerObj);
-    publish("player_location_change", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
+    publish("player_location_change", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1], "board": currentBingoGame.board});
     return;
 }
 
 function handleGameStart(startTime=Date.now()) {
+    startTime = Math.trunc(startTime / 1000000); // ns to ms
     currentBingoGame.startGame(startTime);
 }
 
@@ -443,38 +444,69 @@ function handleGameEnd() {
 }
 
 function handleChatMessage(message) {
-    let event = new GameEvent(EVENT_TYPES.CHAT, message["message"]);
+    let event = new GameEvent(EVENT_TYPES.CHAT, message["message"].trim());
     // publish("chat_message", message["message"]);
     return;
 }
 
-function handleGraffitiSprayed(graffitiData) { // Single graffiti 
-    // let event = new GameEvent(EVENT_TYPES.SPRAY_GRAFFITI, graffitiData); // I don't think I want this, it might be too cluttering.
-    handleMessage({"type": "graffiti_completed", "message": graffitiData}); // Update graffiti data to correct info
+function handleSquareMark(squareMarkData) {
+    console.log("Received square mark event!");
+    console.log(squareMarkData)
+    squareMarkData.square = currentBingoGame.board.getSquareFromIndex(squareMarkData.index);
+    let event = new GameEvent(EVENT_TYPES.MARK_SQUARE, squareMarkData);
     return;
 }
 
-function handleGraffitiCompleted(graffitiData) { // Entire level
+function handleSquareUnmark(squareUnmarkData) {
+    console.log("Received square unmark event!");
+    console.log(squareUnmarkData)
+    let event = new GameEvent(EVENT_TYPES.UNMARK_SQUARE, squareUnmarkData);
+    return;
+}
 
-// function HandleGraffitiCompletion(levelObj, playerIndex, teamObj) {
-// 	console.log(`[${GetNow()}] Completed all graffiti for ${levelObj.name}`);
-// 	kevingoSocket.send(JSON.stringify(new BingoEvent("Graffiti", teamObj.players[playerIndex].name, levelObj.name)))
-// }
-// Do we need to send team data?
-    let event = new GameEvent(EVENT_TYPES.COMPLETE_GRAFFITI, graffitiData);
-    // update team data with new graf info
+function handleTagSprayed(graffitiData) { // Single graffiti 
+    // let event = new GameEvent(EVENT_TYPES.SPRAY_GRAFFITI, graffitiData); // I don't think I want this, it might be too cluttering.
+    
+    // handleMessage({"type": "graffiti_completed", "message": graffitiData}); // Update graffiti data to correct info
+    let team = getTeamFromID(graffitiData.teamID);
+    let levelProgressObj = team["graffitiProgress"][getLevelFromID(graffitiData.levelID)];
+    let graffitiObj = levelProgressObj.GetGraffitiByID(graffitiData.graffitiID);
+	if (graffitiObj == null) {
+		console.log(`Could not find a graffiti in ${levelProgressObj.name} with ID ${graffitiData.graffitiID}.`);
+		return;	
+	}
+
+    let isTagComplete = graffitiObj.MarkTagAsComplete(graffitiData.tagID);
+    if (isTagComplete) {
+		if (levelProgressObj.MarkGraffitiAsComplete(graffitiObj)) {
+			// Level Complete
+			handleGraffitiCompleted(team, levelProgressObj);
+		} else {
+			// Level incomplete, but tag is complete
+			console.log(`${team.displayData.name}: Currently at ${levelProgressObj.CountGraffiti()} / ${levelProgressObj.maxGraffiti} in ${levelProgressObj.name}.`);
+		}
+        
+        publish("graffiti_progress", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1], "board": currentBingoGame.board});
+        let event = new GameEvent(EVENT_TYPES.COMPLETE_GRAFFITI);
+	}
+    return;
+}
+
+function handleGraffitiCompleted(teamData, progressData) { // Entire level
+    let event = new GameEvent(EVENT_TYPES.COMPLETE_LEVEL_GRAFFITI, progressData);
+    publish("all_graffiti_completed", progressData);
     return;
 }
 
 function handleTapePickup(tapeData) {
     let teamID = tapeData.teamID;
-    if (leftTeamData.name == teamID) {
-        leftTeamData.tapeData.push(GetTapeFromID(tapeData.tapeID));
-    } else if (rightTeamData.name == teamID) {
-        rightTeamData.tapeData.push(GetTapeFromID(tapeData.tapeID));
+    if (leftTeamData.id == teamID) {
+        leftTeamData.tapeData.push(getTapeFromID(tapeData.tapeID));
+    } else if (rightTeamData.id == teamID) {
+        rightTeamData.tapeData.push(getTapeFromID(tapeData.tapeID));
     }
     let event = new GameEvent(EVENT_TYPES.COLLECT_TAPE, tapeData);
-    publish("tape_collect", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
+    publish("tape_update", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
     return;
 }
 
@@ -496,13 +528,14 @@ function handleCharacterUnlock(characterData) {
 function handleTeamDataUpdate(message) {
     leftTeamData["displayData"] = message["message"]["LeftTeam"];
     rightTeamData["displayData"] = message["message"]["RightTeam"];
-    console.log("Team data updated!");
+    leftTeamData.id = getMultiIDOnly(message["message"]["LeftTeam"]["multiLink"]);
+    rightTeamData.id = getMultiIDOnly(message["message"]["RightTeam"]["multiLink"]);
+
     // Recolor the board.
     for (let i = 0; i < 25; i++) {
         let boardSquare = currentBingoGame.board.getSquareFromIndex(i);
 
         for (let team of currentBingoGame.teams) {
-            console.log("Current team is:",team);
             if (team.displayData.inputColor == boardSquare.inputColor) {
                 boardSquare.outputColor = team.displayData.outputColor;
                 // do we need a clear condition or do they all swap properly?
@@ -510,8 +543,6 @@ function handleTeamDataUpdate(message) {
         }
     }
     
-    console.log("Sending left team data");
-    console.log(leftTeamData);
     publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     // publish("game_state_update", currentBingoGame.toJson());
     // TODO: Call update on board.
@@ -533,10 +564,6 @@ function determinePlayerSplits(enteringPlayerData) {
         console.log("determinePlayerSplits called without entering player data.");
         return;
     }
-    console.log("Current Game is:");
-    console.log(currentBingoGame);
-    console.log("teams data is:");
-    console.log(currentBingoGame.teams[0]);
     
     let otherPlayers = [currentBingoGame.teams[0].displayData.player1, currentBingoGame.teams[0].displayData.player2, currentBingoGame.teams[1].displayData.player1, currentBingoGame.teams[1].displayData.player2];
     // I think this works how I want it to, but I might need a check.
@@ -598,19 +625,18 @@ function setBoardData(boardData) {
         team.ownedSquares = [];
     }
 
+    currentBingoGame.board.graffitiList = [];
     // Parse operations
     boardJson = JSON.parse(boardData);
     for (let i = 0; i < boardJson.length; i++) {
         boardSquare = currentBingoGame.board.getSquareFromIndex(i);
+        // checkOwnershipChange(boardSquare, boardJson[i]);
         boardSquare.AssignPropsFromData(boardJson[i]);
         areasDict[boardSquare.level].AssignPropsFromSquare(boardSquare); // this is just metadata
 
-        // console.log(`Square color is ${boardSquare.inputColor}`);
         for (let team of currentBingoGame.teams) {
-            // console.log(`Checking if team ${team.displayData.name} with color ${team.displayData.inputColor} owns square with color ${boardSquare.inputColor}`);
             if (team.displayData.inputColor == boardSquare.inputColor) {
                 boardSquare.outputColor = team.displayData.outputColor;
-                // console.log(`Found a match for team ${team.displayData.name} with color ${team.displayData.inputColor}`);
                 team.ownedSquares.push(boardSquare);
             }
         }
@@ -626,6 +652,17 @@ function setBoardData(boardData) {
     }
 }
 
+// function checkOwnershipChange(boardSquare, newSquareData) {
+//     // boardSquare.inputColor is previous, newSquareData.colors is new
+//     if (boardSquare.inputColor != newSquareData.colors) {
+//         if (boardSquare.inputColor != "blank") {
+//             let event = new GameEvent(EVENT_TYPES.MARK_SQUARE, "I don't have enough data hereeee")
+//         } else if (newSquareData.colors != "blank") {
+
+//         }
+//     }
+// }
+
 (function pingTimer() {
     setTimeout(() => {
         if (subscribers.length > 0) {
@@ -635,108 +672,87 @@ function setBoardData(boardData) {
     }, 1000);
 })();
 
-// Utility functions
-
-function getNow() {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    const iii = String(now.getMilliseconds()).padStart(3, '0');
-    return `${hh}:${mm}:${ss}.${iii}`;
-}
-
-function formatNow(unixTime) {
-    const now = new Date(unixTime);
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    const iii = String(now.getMilliseconds()).padStart(3, '0');
-    return `${hh}:${mm}:${ss}.${iii}`;
-}
-
-function GetAreaFromLevel(level) {
-    if (shibuyaAreas.includes(level)) {
-        return "shibuya";
-    }
-    if (koganeAreas.includes(level)) {
-        return "kogane";
-    }
-    if (bentenAreas.includes(level)) {
-        return "benten";
-    }
-}
-
 class GameEvent {
     type = EVENT_TYPES.UNKNOWN;
     data = {};
     timestamp = 0;
     player = null;
+    team = null;
+    sectionalArray = [];
 
     constructor(_type, _data) {
         this.timestamp = Date.now();
         this.data = _data;
         this.type = _type;
-        console.log(`I am a new ${this.type} event! My data is: ${this.data}`);
-        currentBingoGame.events.push(this);
+        console.log(`I am a new ${this.type} event! My data is: ${JSON.stringify(this.data)} important: player is ${this.data.player}`);
+        if (this.data.player) {
+            this.player = getPlayerObjFromName(this.data.player);
+            console.log(`Player object is ${JSON.stringify(this.player)}`);
+            this.team = getTeamObjFromPlayerName(this.data.player);
+            delete this.team.graffitiProgress;
+        }
+        currentBingoGame.addEvent(this);
     }
 
     toDisplayText(displayInfoDict) {
-        let sectionalArray = [];
         let teamString = displayInfoDict["teamString"] ?? null; // what the fuck is team string for this? replace with team?
         let timeFormat = displayInfoDict["timeFormat"] ?? null;
         let timePrefix = null;
         if (timeFormat != null) {
-            timePrefix = `[${timestampToString(Date.now() - currentBingoGame.startTime, timeFormat)}]`;
+            timePrefix = `${timestampToString(Date.now() - currentBingoGame.startTime, timeFormat)}`;
         }
 
         switch (this.type) {
             case EVENT_TYPES.START:
-                sectionalArray = [timePrefix, "Game started!"];
+                this.sectionalArray = [timePrefix, "Game started!"];
                 break;
             case EVENT_TYPES.END:
-                sectionalArray = [timePrefix, "Game ended!"];
+                this.sectionalArray = [timePrefix, "Game ended!"];
                 break;
             case EVENT_TYPES.PAUSE:
-                sectionalArray = [timePrefix, "Game paused."];
+                this.sectionalArray = [timePrefix, "Game paused."];
                 break;
             case EVENT_TYPES.UNPAUSE:
-                sectionalArray = [timePrefix, "Game unpaused."];
+                this.sectionalArray = [timePrefix, "Game unpaused."];
                 break;
             case EVENT_TYPES.MARK_SQUARE:
-                sectionalArray = [timePrefix, this.data.player, teamString, "marked", this.data.square];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "marked", this.data.square.text];
                 break;
             case EVENT_TYPES.UNMARK_SQUARE:
-                sectionalArray = [timePrefix, this.data.player, teamString, "unmarked", this.data.square];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unmarked", this.data.square.text];
                 break;
             case EVENT_TYPES.CHANGE_LOCATION:
-                sectionalArray = [timePrefix, this.data.player, teamString, "moved to", GetLevelFromID(this.data.levelID)];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "moved to", getLevelFromID(this.data.levelID)];
                 break;
             case EVENT_TYPES.COLLECT_TAPE:
-                sectionalArray = [timePrefix, this.data.player, teamString, "collected tape", this.data.tapeID];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "collected tape", this.data.tapeID];
                 break;
             case EVENT_TYPES.UNLOCK_SOUL:
-                sectionalArray = [timePrefix, this.data.player, teamString, "unlocked soul", GetSoulInfoFromNumber(this.data.soulID)];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unlocked soul", getSoulInfoFromNumber(this.data.soulID)];
                 break;
             case EVENT_TYPES.COLLECT_SOUL:
-                sectionalArray = [timePrefix, this.data.player, teamString, "collected soul", GetSoulInfoFromNumber(this.data.soulID)];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "collected soul", getSoulInfoFromNumber(this.data.soulID)];
                 break;
             case EVENT_TYPES.SPRAY_GRAFFITI:
-                sectionalArray = [timePrefix, this.data.player, teamString, "sprayed graffiti", this.data.graffitiID, "in", GetLevelFromID(this.data.levelID)];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "sprayed graffiti", this.data.graffitiID, "in", getLevelFromID(this.data.levelID)];
                 break;
             case EVENT_TYPES.COMPLETE_GRAFFITI:
-                sectionalArray = [timePrefix, this.data.player, teamString, "completed", GetLevelFromID(this.data.levelID), "graffiti"];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "completed a tag in", getLevelFromID(this.data.levelID), "graffiti"];
+                break;
+            case EVENT_TYPES.COMPLETE_LEVEL_GRAFFITI:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "completed", getLevelFromID(this.data.levelID), "graffiti"];
                 break;
             case EVENT_TYPES.CHARACTER_UNLOCK:
-                sectionalArray = [timePrefix, this.data.player, teamString, "unlocked", GetCharacterFromID(this.data.characterID)];
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unlocked", getCharacterFromID(this.data.characterID)];
                 break;
             case EVENT_TYPES.BINGO_SCORED:
-                sectionalArray = [timePrefix, getTeamFromID(this.data.teamID), "scored a bingo!"];
+                this.sectionalArray = [timePrefix, getTeamFromID(this.data.teamID), "scored a bingo!"];
                 break;
             default:
                 return `Unknown event: ${this.data}`;
         }
-        return sectionalArray.filter(item => item !== null).join(" ");
+        this.sectionalArray.filter(item => item !== null);
+        return this.sectionalArray.filter(item => item !== null).join(" ");
     }
 }
 
@@ -758,6 +774,7 @@ class Split {
 
 class Board {
     board = null;
+    graffitiList = [];
 
     constructor() {
         this.board = [[0,0,0,0,0],
@@ -766,11 +783,12 @@ class Board {
                       [0,0,0,0,0],
                       [0,0,0,0,0]];
 
-        let i = 0;
         for (var row = 0; row < 5; row++) {
             for (var col = 0; col < 5; col++) {
                 this.board[row][col] = new Square(row, col);
-                i++;
+                if (this.board[row][col].isGraffiti) {
+                    this.graffitiList.push(this.board[row][col].name);
+                }
             }
         }
     }
@@ -804,10 +822,9 @@ class Board {
 
 class BingoGame {
     bingoCount = 0;
-    scoreToWin = 15; // Placeholder
+    scoreToWin = 99; // Placeholder
     inProgress = false;
     events = [];
-    gameFeed = [];
     chatLog = [];
     teams = [];
     board = null;
@@ -838,9 +855,9 @@ class BingoGame {
         console.log("Created new game, waiting for data...");
     }
 
-    startGame() {
+    startGame(startTime) {
         this.inProgress = true;
-        this.startTime = Date.now();
+        this.startTime = startTime;
         let event = new GameEvent(EVENT_TYPES.START, {});
         publish("game_start", {"startTime": this.startTime});
     }
@@ -864,8 +881,7 @@ class BingoGame {
         for (let i = 0; i < 25; i++) {
             stw += this.board.getSquareFromIndex(i).value;
         }
-        stw = Math.round(stw / 2.0) + Team.allTeamsBingoCount;
-        return stw;
+        this.scoreToWin = Math.round(stw / 2.0) + Team.allTeamsBingoCount;
     }
 
     getGameTime() {
@@ -874,6 +890,13 @@ class BingoGame {
         }
 
         return Date.now() - this.startTime;
+    }
+
+    addEvent(event) {
+        console.log(`Adding event ${event} to the feed!`);
+        this.events.push(event);
+        console.log("Current events in the game:");
+        console.log(this.events);
     }
 
     toJson() {
@@ -902,7 +925,6 @@ class Team {
         outputForeColor: ""
     }
 
-    // Game Data
     levels = [];
     tapeData = [];
     ownedSquares = [];
@@ -929,7 +951,6 @@ class Team {
         let squareScore = 0;
         for (let square of this.ownedSquares) {
             squareScore += square.value;
-            console.log(`Team ${this.displayData.name} owns square ${square.text} worth ${square.value} points.`);
         }
         this.countBingos(board);
         this.score = squareScore + (this.bingocount * BINGOPOINTS);
@@ -946,7 +967,6 @@ class Team {
                 board[rc][4].inputColor == this.displayData.inputColor) {
                 this.bingocount += 1;
                 Team.allTeamsBingoCount += 1;
-                //console.log("Bingo for " + board[rc][0].ownedTeam.name + " on col " + rc);
             }
 
             if (board[0][rc].inputColor == this.displayData.inputColor && 
@@ -956,7 +976,6 @@ class Team {
                 board[4][rc].inputColor == this.displayData.inputColor) {
                 this.bingocount += 1;
                 Team.allTeamsBingoCount += 1;
-                //console.log("Bingo for " + board[0][rc].ownedTeam.name + " on row " + rc);
             }
         }
 
@@ -967,7 +986,6 @@ class Team {
             board[4][4].inputColor == this.displayData.inputColor) {
             this.bingocount += 1;
             Team.allTeamsBingoCount += 1;
-            //console.log("Bingo for " + board[0][0].ownedTeam.name + " on tl/br");
         }
 
         if (board[0][4].inputColor == this.displayData.inputColor && 
@@ -977,7 +995,6 @@ class Team {
             board[4][0].inputColor == this.displayData.inputColor) {
             this.bingocount += 1;
             Team.allTeamsBingoCount += 1;
-            //console.log("Bingo for " + board[0][4].ownedTeam.name + " on bl/tr");
         }
         if (this.bingocount > prevBingoCount) {
             if (this.name == leftTeamData.name) {
@@ -1017,10 +1034,6 @@ class Player {
 }
 
 function getPlayerObjFromName(playerName) {
-    console.log("left team data is:");
-    console.log(leftTeamData);
-    console.log("right team data is:");
-    console.log(rightTeamData);
     if (leftTeamData) {
         if (leftTeamData.displayData.player1.name == playerName) {
             return leftTeamData.displayData.player1;
@@ -1036,6 +1049,30 @@ function getPlayerObjFromName(playerName) {
         }
     }
     console.warn(`Could not find player ${playerName} on a team!.`);
+    return null;
+}
+
+function getTeamObjFromPlayerName(playerName) {
+    if (leftTeamData) {
+        if (leftTeamData.displayData.player1.name == playerName || leftTeamData.displayData.player2.name == playerName) {
+            return leftTeamData;
+        }
+    }
+    if (rightTeamData) {
+        if (rightTeamData.displayData.player1.name == playerName || rightTeamData.displayData.player2.name == playerName) {
+            return rightTeamData;
+        }
+    }
+    console.warn(`Could not find team for player ${playerName}!.`);
+    return null;
+}
+
+function getTeamFromID(id) {
+    if (leftTeamData.id == id) {
+        return leftTeamData;
+    } else if (rightTeamData.id == id) {
+        return rightTeamData;
+    }
     return null;
 }
 
@@ -1069,11 +1106,12 @@ class Square {
                 this.level = level;
             }
         });
-        this.region = GetAreaFromLevel(this.level);
+        this.region = getAreaFromLevel(this.level);
 
         if (squareText.includes("100%")) {
             this.value = GRAFFITIPOINTS;
             this.isGraffiti = true;
+            currentBingoGame.board.graffitiList.push(this.level);
         } else {
             this.value = SQUAREPOINTS;
             this.isGraffiti = false;
@@ -1084,12 +1122,12 @@ class Square {
         // this.SetDisplayText(squareText);
 
         this.isDefault = true;
-        // let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Cube", "Rhyth", "Soda", "Jazz"];
-        // checkArray.forEach(keyword => {
-        //     if (this.midText.includes(keyword)) {
-        //         this.isDefault = false;
-        //     }
-        // });
+        let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Cube", "Rhyth", "Soda", "Jazz"];
+        checkArray.forEach(keyword => {
+            if (this.text.includes(keyword)) {
+                this.isDefault = false;
+            }
+        });
 
         // TODO: Are we setting team/color data here? That might be bad if we're not.
     }
@@ -1206,23 +1244,23 @@ class Graffiti {
                 break;
             
         }
-        // console.log(`Size: ${this.size} / This tag has completed ${this.completeTags} and has incomplete ${this.incompleteTags}`);
     }
 
     MarkTagAsComplete(tagID) {
         if (this.completeTags.includes(tagID)) {
-            console.log(`Already have ${tagID} for ${this.location} (ID: ${this.id})`);
         } else {
             this.completeTags.push(this.incompleteTags.splice(this.incompleteTags.indexOf(tagID), 1));
-            // console.log(`Marked ${tagID} for ${this.location} (ID: ${this.id})`);
             if (this.incompleteTags.length == 0) {
-                console.log(`[${GetNow()}] ${this.location} graffiti is complete!`);
+                console.log(`[${getNow()}] ${this.location} graffiti is complete!`);
                 return true;
             }
         }
         return false;
     }
 }
+
+// Util functions
+{
 
 function timestampToString(timestampMS, dateFormat = "[%m:%s.%i]") {
     // We're going to use a basic implementation where:
@@ -1240,8 +1278,10 @@ function timestampToString(timestampMS, dateFormat = "[%m:%s.%i]") {
     return dateString;
 }
 
-// Game Data
-{
+function getMultiIDOnly(multiLink) {
+    return multiLink.includes("connect=") ? multiLink.split("connect=")[1] : multiLink;
+}
+
 
 function Commafy(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -1267,12 +1307,42 @@ function formatMilliseconds(ms) {
   );
 }
 
-function GetNow() {
-	let rightNow = new Date();
-	return rightNow.toLocaleTimeString().split(" ")[0] + "." + (rightNow.getMilliseconds() + "000").slice(0,3);
+function getNow() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const iii = String(now.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${iii}`;
 }
 
-function GetLevelFromID(levelInt) {
+function formatNow(unixTime) {
+    const now = new Date(unixTime);
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const iii = String(now.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${iii}`;
+}
+
+function getAreaFromLevel(level) {
+    if (shibuyaAreas.includes(level)) {
+        return "shibuya";
+    }
+    if (koganeAreas.includes(level)) {
+        return "kogane";
+    }
+    if (bentenAreas.includes(level)) {
+        return "benten";
+    }
+}
+
+}
+
+// Game Data
+{
+
+function getLevelFromID(levelInt) {
     switch (levelInt) {
         case 0:
             return LEVELS.GARAGE;
@@ -1309,7 +1379,7 @@ function GetLevelFromID(levelInt) {
     }
 }
 
-function GetTapeFromID(tapeID) {
+function getTapeFromID(tapeID) {
     switch (tapeID) {
         case 0:
             return LEVELS.SHIBUYA;
@@ -1342,7 +1412,7 @@ function GetTapeFromID(tapeID) {
     }
 }
 
-function GetCharacterFromID(charID) {
+function getCharacterFromID(charID) {
     switch (charID) {
         case 10:
             return "Cube";
@@ -1359,7 +1429,7 @@ function GetCharacterFromID(charID) {
     }
 }
 
-function GetSoulInfoFromNumber(soulNum) {
+function getSoulInfoFromNumber(soulNum) {
     switch (soulNum) {
         case 5:
             return {"area": LEVELS.DOGEN, "name": "Isolated platform down hill", "type": "default"};
@@ -2063,7 +2133,7 @@ function getTagsForLevel(levelID) {
                     [44, "S", "Grind to Dark 3"],
                     [62, "SS", "Grind to Dark 4"]];
         case 196612:
-        case LEVELS.SDPP:
+        case LEVELS.SKYSCRAPER:
             return [[6, "S", "Top of Pyramid"],
                     [33, "M", "Base of Pyramid"],
                     [26, "L", "Under Pyramid"],

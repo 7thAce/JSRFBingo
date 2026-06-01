@@ -61,18 +61,22 @@ server_ws.addEventListener("message", (event) => {
             console.log("Received player split: ", messageData.message);
             displaySplitData(messageData.message);
             break;
+        case "graffiti_progress":
+            console.log("Received graffiti progress update: ", messageData.message);
+            handleGraffitiProgress(messageData.message);
+            break;
         case "event_feed_update":
             console.log("Received event feed update: ", messageData.message);
             createGameFeed(messageData.message);
             break;
-        case "square_marked":
-            console.log("Received square marked: ", messageData.message);
-            // updateSquareVisuals(messageData.message);
-            break;
-        case "game_feed":
-            console.log("Received game feed event: ", messageData.message);
-            createGameFeed(messageData.message);
-            break;
+        // case "square_marked":
+        //     console.log("Received square marked: ", messageData.message);
+        //     handleSquareMark(messageData.message);
+        //     break;
+        // case "square_unmarked":
+        //     console.log("Received square unmarked: ", messageData.message);
+        //     handleSquareUnmark(messageData.message);
+        //     break;
         case "ping":
             break;
         default:
@@ -83,7 +87,7 @@ server_ws.addEventListener("message", (event) => {
 });
 
 class DisplayPlayer {
-    location = "GarageD";
+    location = "Uninit...";
     enterTime = 0;
     name = "";
 
@@ -92,19 +96,19 @@ class DisplayPlayer {
     }
 }
 
-function updateTeamData(teamsData) {
-    console.log("Teams data!");
-    console.log(teamsData.leftTeam);
-    if (teamsData["LeftTeam"]) {
-        document.getElementById("leftTeamName").textContent = teamsData.LeftTeam.displayData.name;
-        document.getElementById("leftTeamScore").textContent = teamsData.LeftTeam.score;
-    }
-    if (teamsData["RightTeam"]) {
-        document.getElementById("rightTeamName").textContent = teamsData.RightTeam.displayData.name;
-        document.getElementById("rightTeamScore").textContent = teamsData.RightTeam.score;
-    }
+// function updateTeamData(teamsData) {
+//     console.log("Teams data!");
+//     console.log(teamsData.leftTeam);
+//     if (teamsData["LeftTeam"]) {
+//         document.getElementById("leftTeamName").textContent = teamsData.LeftTeam.displayData.name;
+//         document.getElementById("leftTeamScore").textContent = teamsData.LeftTeam.score;
+//     }
+//     if (teamsData["RightTeam"]) {
+//         document.getElementById("rightTeamName").textContent = teamsData.RightTeam.displayData.name;
+//         document.getElementById("rightTeamScore").textContent = teamsData.RightTeam.score;
+//     }
     
-}
+// }
 
 function updateTeamData2(teamsData) {
     console.log("TEAMS DATA IS THIS BIG ANSWER")
@@ -120,6 +124,7 @@ function updateTeamData2(teamsData) {
     console.log("right team is");
     console.log(rightTeam);
 
+    // TODO: Break these into their own functions becuase they're causing some level of conflict.
 
     document.querySelector(":root").style.setProperty("--left-color", leftTeam.displayData.outputColor);
     document.querySelector(":root").style.setProperty("--right-color", rightTeam.displayData.outputColor);
@@ -133,14 +138,14 @@ function updateTeamData2(teamsData) {
     document.getElementById("leftBottomPlayer").textContent = leftTeam.displayData.player2.name;
     document.getElementById("leftTopPronouns").textContent = leftTeam.displayData.player1.pronouns;
     document.getElementById("leftBottomPronouns").textContent = leftTeam.displayData.player2.pronouns;
-    document.getElementById("leftTeamScore").textContent = leftTeam.score;
+    document.getElementById("leftTeamScore").textContent = String(leftTeam.score).padStart(2, '0');
 
     document.getElementById("rightTeamName").textContent = rightTeam.displayData.name;
     document.getElementById("rightTopPlayer").textContent = rightTeam.displayData.player1.name;
     document.getElementById("rightBottomPlayer").textContent = rightTeam.displayData.player2.name;
     document.getElementById("rightTopPronouns").textContent = rightTeam.displayData.player1.pronouns;
     document.getElementById("rightBottomPronouns").textContent = rightTeam.displayData.player2.pronouns;
-    document.getElementById("rightTeamScore").textContent = rightTeam.score;
+    document.getElementById("rightTeamScore").textContent = String(rightTeam.score).padStart(2, '0'); //TODO: WHY IS THIS HERE
 
     if (players["tl"]?.name != leftTeam.displayData.player1.name) {
         players["tl"] = new DisplayPlayer(leftTeam.displayData.player1);
@@ -192,16 +197,18 @@ function updateTeamData2(teamsData) {
     displayPlayerLocations();
 }
 
-function updateBoardVisuals(boardData, teamsData) {
-    console.log("UBV teams data is");
-    console.group(teamsData);
+function updateBoardVisuals(gameData, teamsData) {
+    let boardData = gameData.board;
+    // console.log("UBV teams data is");
+    // console.group(teamsData);
     for (let i = 0; i < 25; i++) {
         let rc = ArrayToGrid(i);
         let boardSquare = boardData.board[rc.row][rc.col];
         setSquareVisuals(boardSquare, rc, teamsData);
     }
-    setGameDataTexts(teamsData, boardData.pointsToWin, 0);
-
+    console.log("UBV board data is ")
+    console.log(gameData);
+    setGameDataTexts(boardData, teamsData, gameData.scoreToWin);
 
     // Set score
     // const leftTeam = boardData.teams.find(t => t.id === "left");
@@ -211,6 +218,8 @@ function updateBoardVisuals(boardData, teamsData) {
 }
 
 function handleGameStart(startTime) {
+    console.log("start time is by game start " + startTime);
+    console.log(typeof(startTime));
     clearInterval(gameTimerTick);
     gameTimerTick = setInterval(() => {
         updateGameTime(startTime);
@@ -231,10 +240,19 @@ function handleGameEnd(endTime) {
 
 function updateGameTime(timestamp) {
     // Convert timestamp to elapsed time
+    // console.log("start timestamp is " + timestamp);
     let elapsed = Date.now() - timestamp;
     let minutes = Math.floor(elapsed / 60000);
     let seconds = Math.floor((elapsed % 60000) / 1000);
-    document.getElementById("gameTime").textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    gameTimeToDigits(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+}
+
+function gameTimeToDigits(timeString) {
+    let timeArray = timeString.split("");
+    document.getElementById("gameTimeDigit4").textContent = timeArray[timeArray.length - 1]
+    document.getElementById("gameTimeDigit3").textContent = timeArray[timeArray.length - 2]
+    document.getElementById("gameTimeDigit2").textContent = timeArray[timeArray.length - 4]
+    document.getElementById("gameTimeDigit1").textContent = timeArray[timeArray.length - 5]
 }
 
 function displayPlayerLocations() {
@@ -245,25 +263,53 @@ function displayPlayerLocations() {
 }
 
 function updateScores(scoreDict) {
-    document.getElementById("leftTeamScore").textContent = scoreDict.leftTeamScore;
-    document.getElementById("rightTeamScore").textContent = scoreDict.rightTeamScore;
+    document.getElementById("leftTeamScore").textContent = String(scoreDict.leftTeamScore).padStart(2, '0');;
+    document.getElementById("rightTeamScore").textContent = String(scoreDict.rightTeamScore).padStart(2, '0');;
 }
 
 function createGameFeed(allEvents) {
-    let innerHTML = [];
+    let innerHTML = "";
     allEvents.forEach(event => {
-        if (event.sectionalArray.length > 2) { // Not Start End Pause events
-            // Player data is the 2nd one
-            event.sectionalArray[1] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[1] + "</style>";
-            // We should *really* change this based on type, but we'll deal with that problem later.
-            event.sectionalArray[2] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[2] + "</style>";
-            event.sectionalArray[4] = `<style color=${event.player.displayData.outputColor}>` + event.sectionalArray[3] + "</style>";
+        console.log("This event is:");
+        console.log(event);
+        if (event.sectionalArray.length > 2) {
+            [topText, midText, botText] = triTextFromBaseText(event.sectionalArray[4]);
+            event.sectionalArray[4] = `${topText} ${midText}`;
+
+            if (event.sectionalArray[1] != null) {
+                event.sectionalArray[1] = wrapInColorSpan(event.sectionalArray[1], event.team.displayData.outputColor);
+            }
+            if (event.sectionalArray[2] != null) {
+                event.sectionalArray[2] = wrapInColorSpan(event.sectionalArray[2], event.team.displayData.outputColor);
+            }
+            if (event.sectionalArray[4] != null) {
+                event.sectionalArray[4] = wrapInColorSpan(event.sectionalArray[4], event.team.displayData.outputColor);
+            }
         }
-        event.outText = event.join(" ");
-    });    
-    innerHTML = allEvents.map(event => event.outText).join("\n");
-    console.log("Game feed inner HTML is: " + innerHTML);
+        event.displayText = event.sectionalArray.filter(item => item !== null).join("\u00A0");
+        console.log("Display text is");
+        console.log(event.displayText);
+        if (event.displayText.length > 0) {
+            innerHTML += (event.displayText + "<br>");
+        }
+    });
     document.getElementById("eventFeed").innerHTML = innerHTML;
+}
+
+function wrapInColorSpan(text, color) {
+    return `<span style="font-weight: bold; color: ${color};">${text}</span>`;
+}
+
+function handleSquareMark(squareMarkData) {
+    console.log("Received square mark event!");
+    console.log(squareMarkData)
+    return;
+}
+
+function handleSquareUnmark(squareUnmarkData) {
+    console.log("Received square unmark event!");
+    console.log(squareUnmarkData)
+    return;
 }
 
 function updateAllLocations(locationDict) {
@@ -273,64 +319,108 @@ function updateAllLocations(locationDict) {
     players["bl"].location = locationDict.leftTeam.displayData.player2.location || "Pending...";
     players["tr"].location = locationDict.rightTeam.displayData.player1.location || "Pending...";
     players["br"].location = locationDict.rightTeam.displayData.player2.location || "Pending...";
-    players["tl"].enterTime = locationDict.leftTeam.displayData.player1.enterTime || 1778471026142;
-    players["bl"].enterTime = locationDict.leftTeam.displayData.player2.enterTime || 1778471026142;
-    players["tr"].enterTime = locationDict.rightTeam.displayData.player1.enterTime || 1778471026142;
-    players["br"].enterTime = locationDict.rightTeam.displayData.player2.enterTime || 1778471026142;
+    players["tl"].enterTime = locationDict.leftTeam.displayData.player1.enterTime || 0;
+    players["bl"].enterTime = locationDict.leftTeam.displayData.player2.enterTime || 0;
+    players["tr"].enterTime = locationDict.rightTeam.displayData.player1.enterTime || 0;
+    players["br"].enterTime = locationDict.rightTeam.displayData.player2.enterTime || 0;
     updateTapeData(locationDict);
+    displayGraffitiChevron(locationDict);
     displayPlayerLocations();
 }
 
 function updateTapeData(tapeTeamsDict) {
+    console.log("updating tape data!");
+    console.log(tapeTeamsDict.leftTeam.tapeData);
+    console.log(players["tl"].location);
     if (tapeTeamsDict.leftTeam.tapeData.includes(players["tl"].location)) { 
         players["tl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
     } else {
-        players["tl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+        players["tl"].elements.tape.style.backgroundImage = "url(gfx/chevronNoTape.svg)";
     }
 
     if (tapeTeamsDict.leftTeam.tapeData.includes(players["bl"].location)) { 
         players["bl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
     } else {
-        players["bl"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+        players["bl"].elements.tape.style.backgroundImage = "url(gfx/chevronNoTape.svg)";
     }
 
     if (tapeTeamsDict.rightTeam.tapeData.includes(players["tr"].location)) { 
         players["tr"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
     } else {
-        players["tr"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+        players["tr"].elements.tape.style.backgroundImage = "url(gfx/chevronNoTape.svg)";
     }
     if (tapeTeamsDict.rightTeam.tapeData.includes(players["br"].location)) { 
         players["br"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
     } else {
-        players["br"].elements.tape.style.backgroundImage = "url(gfx/chevronTape.svg)";
+        players["br"].elements.tape.style.backgroundImage = "url(gfx/chevronNoTape.svg)";
     }
 }
 
 function updatePlayerLocationDurations() {
     Object.entries(players).forEach(([key, player]) => {
-        let DISPLAYTIME = 1000;
+        let DISPLAYTIME = 20000;
         let duration = Date.now() - player.enterTime;
-        console.log(`Duration: ${duration} || Player enter time: ${player.enterTime} || Now: ${Date.now()}`);
-        player.elements.duration.textContent = timestampToString(duration, "%m:%s");
-        if (duration >= DISPLAYTIME && player.elements.location.textContent != "Garage") {
-            player.elements.duration.classList.remove("retractedLeftShort");
-        } else {
-            player.elements.duration.classList.add("retractedLeftShort");
-        }
-        if (duration >= 15000) {
-            player.elements.split.classList.add("retractedLeftShort");
+        // console.log(`Duration: ${duration} || Player enter time: ${player.enterTime} || Now: ${Date.now()}`);
+        if (duration < 100000000000) {
+            player.elements.duration.textContent = timestampToString(duration, "%m:%s");
+            if (duration >= DISPLAYTIME && player.elements.location.textContent != "Garage") {
+                player.elements.duration.classList.remove("retractedLeftShort");
+            } else {
+                player.elements.duration.classList.add("retractedLeftShort");
+            }
+            if (duration >= 15000) {
+                player.elements.split.classList.add("retractedLeftShort");
+            }
         }
     });
 }
 
 function displaySplitData(splitData) {
     Object.entries(players).forEach(([key, player]) => {
-        if (player.name == splitData.ahead.player) {
+        console.log("player is");
+        console.log(player);
+        console.log(`${player.name.name} vs. ${splitData.ahead.player} and vs. ${splitData.behind.player}`);
+        let timeDiff = splitsData.behind.enterTime - splitsData.ahead.enterTime;
+        if (player.name.name == splitData.ahead.player) {
+            console.log("AHEAD PROC");
             player.elements.split.textContent = `First!`;
             player.elements.split.classList.remove("retractedLeftShort");
-        } else if (player.name == splitData.behind.player) {
-            player.elements.split.textContent = "Diff"
+        } else if (player.name.name == splitData.behind.player) {
+            console.log("BEHIND PROC");
+            player.elements.split.textContent = timestampToString(timeDiff, "%s:%c")
             player.elements.split.classList.remove("retractedLeftShort");
+        }
+    });
+}
+
+function handleGraffitiProgress(graffitiData) {
+    displayGraffitiChevron(graffitiData);
+    // displayGraffitiChevron({"leftTeam": graffitiData.leftTeam, "rightTeam": graffitiData.rightTeam, "board": graffitiData.board});
+}
+
+function displayGraffitiChevron(teamsData) {
+    let leftTeam = teamsData.leftTeam;
+    let rightTeam = teamsData.rightTeam;
+    let board = teamsData.board; // We sneakily pass it through here to use.
+    // let levelProg = leftTeam.levelProgress;
+
+    console.log("board is")
+    console.log(board);
+    Object.entries(players).forEach(([key, player]) => {
+        if (board.graffitiList.includes(player.location)) {
+            if (key.startsWith("t")) {
+                levelProg = leftTeam.graffitiProgress[player.location];
+            } else {
+                levelProg = rightTeam.graffitiProgress[player.location];
+            }
+            console.log(leftTeam);
+            console.log("level prog is");
+            console.log(levelProg);
+            player.elements.graffiti.classList.remove("retractedLeftLong");
+            player.elements.graffiti.textContent = `${levelProg.completeGraffiti.length}/${levelProg.maxGraffiti}`;
+        } else {
+            player.elements.graffiti.classList.add("retractedLeftLong");
+            player.elements.graffiti.textContent = `0/0`;
         }
     });
 }
@@ -407,38 +497,47 @@ function setSquareVisuals(boardSquare, rc, teams) {
     let midText = "No Data";
     let botText = "aaaNone";
 
-    basetext = boardSquare["text"];
-    console.log("Base text is " + basetext);
+    [topText, midText, botText] = triTextFromBaseText(boardSquare["text"]);
 
-    if (basetext.includes("-")) {
-        let parts = basetext.split(" - ")[0].split(" ");
-        botText = parts.splice(-1)[0];
-        topText = parts.join(" ");
-        midText = basetext.split(" - ")[1];
-    }
-
-    if (basetext.includes("Unlock")) {
-        let parts = basetext.split(" Unlock ");
-        botText = "Char";
-        topText = parts[0];
-        midText = parts[1];
-    }
-
-    if (basetext.toLowerCase().includes("graffiti")) {
-        let parts = basetext.split(" 100% ")[0].split(" "); //TODO: Update me to fix the BP/Sky issue.
-        botText = "Graf";
-        topText = parts[0];
-        midText = "100% Graffiti";
-    }
-
-    console.log("Setting text for square " + rc.row + ", " + rc.col + ": " + topText + " | " + midText);        
-    
     document.getElementById(`toptext${rc.row}${rc.col}`).textContent = topText;
     document.getElementById(`toptext${rc.row}${rc.col}`).style.color = regionMark(boardSquare);
     document.getElementById(`midtext${rc.row}${rc.col}`).textContent = midText;
     document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare); // Set to contrast.
     document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor; //maybe change to class system
+    if (boardSquare.isGraffiti) {
+        document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquare");
+    } else {
+        document.getElementById(`square${rc.row}${rc.col}`).classList.remove("graffitiSquare");
+    }
     animateSquareMark(rc, boardSquare.outputColor, teams);
+}
+
+function triTextFromBaseText(baseText) {
+    let topText = "N/A";
+    let midText = "No Data";
+    let botText = "None";
+
+    if (baseText.includes("-")) {
+        let parts = baseText.split(" - ")[0].split(" ");
+        botText = parts.splice(-1)[0];
+        topText = parts.join(" ");
+        midText = baseText.split(" - ")[1];
+    }
+
+    if (baseText.includes("Unlock")) {
+        let parts = baseText.split(" Unlock ");
+        botText = "Char";
+        topText = parts[0];
+        midText = parts[1];
+    }
+
+    if (baseText.toLowerCase().includes("graffiti")) {
+        let parts = baseText.split(" Spray 100% ")[0];
+        botText = "Graf";
+        topText = parts;
+        midText = "100% Graffiti";
+    }
+    return [topText, midText, botText];
 }
 
 function animateSquareMark(rc, outputColor, teams) {
@@ -457,12 +556,38 @@ function animateSquareMark(rc, outputColor, teams) {
 "teams":[{"id":"left","displayData":{"name":"","players":[],"inputColor":"","outputColor":"","outputForeColor":""},"levels":[],"ownedSquares":[],"score":0,"maxScore":0,"bingoCount":0},{"id":"right","displayData":{"name":"","players":[],"inputColor":"","outputColor":"","outputForeColor":""},"levels":[],"ownedSquares":[],"score":0,"maxScore":0,"bingoCount":0}]
 */
 
-function setGameDataTexts(teamData, pointsToWin, startTime) {
+function setGameDataTexts(boardData, teamData, pointsToWin) {
     // TODO: Check if this needs to be removed, it might be done via replicant which might be unnecessary.
+    document.getElementById("pointsToWin").textContent = pointsToWin;
     updateTeamData2(teamData);
 
+    let shibuyaPoints = 0;
+    let koganePoints = 0;
+    let bentenPoints = 0;
+    let defaultPoints = 0;
+
+    for (let i = 0; i < 25; i++) {
+        let rc = ArrayToGrid(i);
+        let boardSquare = boardData.board[rc.row][rc.col];
+        console.log(boardSquare);
+        if (boardSquare.region == "shibuya" && boardSquare.outputColor == null) {
+            shibuyaPoints += boardSquare.value;
+        }
+        if (boardSquare.region == "benten" && boardSquare.outputColor == null) {
+            bentenPoints += boardSquare.value;
+        }
+        if (boardSquare.region == "kogane" && boardSquare.outputColor == null) {
+            koganePoints += boardSquare.value;
+        }
+        if (boardSquare.isDefault) {
+            defaultPoints += boardSquare.value;
+        }
+    }
+    document.getElementById("shibuyaPoints").textContent = String(shibuyaPoints).padStart(2, "0");
+    document.getElementById("bentenPoints").textContent = String(bentenPoints).padStart(2, "0");
+    document.getElementById("koganePoints").textContent = String(koganePoints).padStart(2, "0");
+    document.getElementById("defaultPoints").textContent = String(defaultPoints).padStart(2, "0");
     // document.getElementById("gameTime").textContent = "02:34";
-    document.getElementById("pointsToWin").textContent = pointsToWin;
 }
 
 function updateGameState(gameState) {
@@ -478,15 +603,17 @@ function updateGameState(gameState) {
     // Note that this isn't good because if we change the format in one place, we won't change it here.
     // On that end, we should, in the future request the data from the server rather than GIMME ALL.
     if (gameState.inProgress) {
+        console.log("Game is in progress")
         if (!gameTimerTick) {
+            console.log("start time is " + gameState.startTime);
             handleGameStart(gameState.startTime);
         }
     }
     console.log("Think it's a ref");
     console.log(gameState);
-    updateBoardVisuals(gameState.board, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
-    updateAllLocations({"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]})
-
+    updateBoardVisuals(gameState, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
+    updateAllLocations({"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1], "board": gameState.board});
+    createGameFeed(gameState.events);
 }
 
 function ArrayToGrid(index) {

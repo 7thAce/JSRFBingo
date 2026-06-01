@@ -127,6 +127,11 @@ div {
     left: 1199px;
 }
 
+.graffitiSquare {
+    background-image: url("gfx/graffitiicon.png");
+    background-size: 94px;
+}
+
 .location {
     background-image: url('gfx/chevronLocation.svg');
     padding-left: 5px;
@@ -159,7 +164,7 @@ div {
 
 .graffitiProgress {
     background-image: url('gfx/chevronGraffiti.svg');
-    padding-left: 133px;
+    padding-left: 135px;
     font-size: 32px;
     padding-top: 61px;
     z-index: -15;
@@ -198,13 +203,23 @@ div {
 
 
 .infoBox {
+    position: absolute;
     display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: bold;
     font-size: 40px;
     width: 126px;
     height: 49px;
     -webkit-text-stroke-width: 1.5px;
     -webkit-text-stroke-color: black;
+}
+
+.infoBox .timerDigit {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .strokeMain {
@@ -218,6 +233,14 @@ div {
 #gameTime {
     left: 759px;
     top: 116px;
+}
+
+.timerDigit {
+    width: 29px;
+}
+
+#gameTimeColon {
+    width: 10px;
 }
 
 #pointsToWin {
@@ -336,19 +359,19 @@ div {
 }
 
 #eventFeed {
-    display: flex;
+    display: block;
     left: 723px;
     top: 838px;
     width: 470px;
     height: 76px;
     text-align: left;
-    justify-content: left;
     font-size: 18px;
     font-weight: normal;
     padding-left: 4px;
     white-space: nowrap;
     overflow: hidden;
-    align-items: start;
+    line-height: 1.3;
+    color: black;
 }
 
 

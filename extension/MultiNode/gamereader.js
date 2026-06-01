@@ -10,7 +10,6 @@ let teams = [];
 
 // const ID1 = ["cedc46d4-1df3-4738-9257-58bd39124dee", "7thAce"];
 
-
 function launchGameReader(multiID) {
     console.log(`Launching Game Reader for multiID: ${multiID}`);
     let gameReader = new TeamGameReader(multiID);
@@ -48,7 +47,7 @@ class TeamGameReader {
             if (message.type === 'data') {
                 this.ParseGameData(JSON.parse(message.data));
             } else if (message.type === 'connected') {
-                console.log(`Connection to ${this.multiID} established in child process.`);
+                console.log(`[${this.multiID}] Connection to ${this.multiID} established in child process.`);
             } else if (message.type === 'error') {
                 console.error(`Connection error in child: ${message.error}`);
             }
@@ -97,7 +96,7 @@ class TeamGameReader {
     
 
     ParseGameData(jsonData) {
-        const prefix = `Received Data - cat: ${jsonData.cat}, sub: ${jsonData.sub}, b: ${jsonData.b}, dw1: ${jsonData.dw1}, dw2: ${jsonData.dw2}, dw3: ${jsonData.dw3} -> `;
+        const prefix = `[${this.multiID}] Received Data - cat: ${jsonData.cat}, sub: ${jsonData.sub}, b: ${jsonData.b}, dw1: ${jsonData.dw1}, dw2: ${jsonData.dw2}, dw3: ${jsonData.dw3} -> `;
     
         switch (jsonData.cat) {
             case 0:
@@ -224,7 +223,7 @@ function HandlePlayerRegister(playerName, playerIndex, teamObj) {
 
 function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {
     // This might be a single tag and we only need it on completion.
-	sendToServer("graffiti_sprayed", {
+	sendToServer("tag_sprayed", {
         "teamID": teamObj.multiID,
         "levelID": levelID,
         "graffitiID": graffitiID,
@@ -338,6 +337,7 @@ function GetNow() {
 	return rightNow.toLocaleTimeString().split(" ")[0] + "." + (rightNow.getMilliseconds() + "000").slice(0,3);
 }
 
+// launchGameReader("d262bb65-c761-4831-b062-0238458021cf");
 
 module.exports = {
     launchGameReader

@@ -42,13 +42,45 @@
 			<div id="rightTeamScore" class="teamScore">07</div>
 			<div id="gameTime" class="infoBox strokeMain">
 				<!-- This needs to be spanned -->
-				<div id="gameTimeDigit1" class="timerDigit">0</div>
-				<div id="gameTimeDigit2" class="timerDigit">4</div>
+				<div id="gameTimeDigit1" class="timerDigit">-</div>
+				<div id="gameTimeDigit2" class="timerDigit">-</div>
 				<div id="gameTimeColon" class="timerDigit">:</div>
-				<div id="gameTimeDigit3" class="timerDigit">5</div>
-				<div id="gameTimeDigit4" class="timerDigit">6</div>
+				<div id="gameTimeDigit3" class="timerDigit">-</div>
+				<div id="gameTimeDigit4" class="timerDigit">-</div>
 			</div>
 			<div id="matchScore" class="infoBox"></div>
+			<div id="bo5GameScore" style="visibility: hidden">
+				<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+					<style>
+						.leftColor { fill: var(--left-color);stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.neutralColor { fill: #F0F0F0;stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.rightColor { fill: var(--right-color);stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.s0 { fill: #cccccc;stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+					</style>
+					<g id="Bo5">
+						<path id="Bo5-L1" fill-rule="evenodd" class="neutralColor" d="m912 118l-12 7v14l12 7 12-7v-14z"/>
+						<path id="Bo5-L2" fill-rule="evenodd" class="neutralColor" d="m936 135l-12 7v14l12 7 12-7v-14z"/>
+						<path id="Bo5-5" fill-rule="evenodd" class="neutralColor" d="m960 118l-12 7v14l12 7 12-7v-14z"/>
+						<path id="Bo5-R1" fill-rule="evenodd" class="neutralColor" d="m1008 118l-12 7v14l12 7 12-7v-14z"/>
+						<path id="Bo5-R2" fill-rule="evenodd" class="neutralColor" d="m984 135l-12 7v14l12 7 12-7v-14z"/>
+					</g>
+				</svg>
+			</div>
+			<div id="bo3GameScore" style="visibility: shown">
+				<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+					<style>
+						.leftColor { fill: var(--left-color);stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.neutralColor { fill: #F0F0F0;stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.rightColor { fill: var(--right-color);stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+						.s0 { fill: #cccccc;stroke: #008080;paint-order:stroke fill markers;stroke-miterlimit:100;stroke-width: 4 } 
+					</style>
+					<g id="Bo3">
+						<path id="Bo3-L1" fill-rule="evenodd" class="neutralColor" d="m936 146l-12-7v-14l12-7 12 7v14z"/>
+						<path id="Bo3-3" fill-rule="evenodd" class="neutralColor" d="m960 163l-12-7v-14l12-7 12 7v14z"/>
+						<path id="Bo3-R1" fill-rule="evenodd" class="neutralColor" d="m984 146l-12-7v-14l12-7 12 7v14z"/>
+					</g>
+				</svg>
+			</div>
 			<div id="pointsToWin" class="infoBox">15</div>
 
 			<div id="topLeftHUD" class="HUD">

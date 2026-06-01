@@ -279,9 +279,6 @@ function HandleCharUnlock(charID, playerIndex, teamObj) {
 // Player Tracker?
 function HandleAreaChange(levelID, playerIndex, teamObj) {
     if (playerIndex != undefined) {
-        console.log("PLAYER LOCATION CHANGE INFO:");
-        console.log(teamObj);
-        console.log("Player index is " + playerIndex);
         sendToServer("player_location_change", {
             "teamID": teamObj.multiID,
             "levelID": levelID,

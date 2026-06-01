@@ -3,19 +3,24 @@
 nodecg.log.info("Wizard's Tome panel script running!");
 console.log("Wizard's Tome panel script running!");
 const WS_SOURCE = "Dashboard"
-const websocket = new WebSocket("ws://localhost:7135");
+const server_ws = new WebSocket("ws://localhost:7135");
 
 const teamsRep = nodecg.Replicant("teams", {defaultValue: {}, persistent: true});
 let teamsData = {};
 
-websocket.onopen = () => {
+server_ws.onopen = () => {
     console.log("Connected to WebSocket server.");
     sendToServer("connect", "Connected");
 };
 
-websocket.onclose = () => {
+server_ws.onclose = () => {
     console.log("Disconnected from WebSocket server.");
 };
+
+// server_ws.addEventListener("message", (event) => {
+//     let messageData = JSON.parse(event.data);
+//     if (messageData.type == "game_")
+// });
 
 window.addEventListener('beforeunload', () => {
     localStorage.setItem('teamDataSave', JSON.stringify(teamsData));
@@ -45,10 +50,43 @@ window.addEventListener('load', () => {
             document.getElementById("rightMultiLink").value = savedData["RightTeam"]["multiLink"] || "";
         }
     }
+    initMatchScoreControls();
 });
 
+function initMatchScoreControls() {
+    const squares = document.querySelectorAll('#matchScoreControls .match-score-square');
+    squares.forEach(square => {
+        square.addEventListener('click', () => {
+            square.classList.add("leftFill");
+            square.classList.remove("rightFill", "neutralFill");   
+            sendToServer("match_score", { "leftScore": document.querySelectorAll('.leftFill').length,
+                                          "rightScore": document.querySelectorAll('.rightFill').length});
+        });
+        square.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            square.classList.add("rightFill");
+            square.classList.remove("leftFill", "neutralFill");
+            sendToServer("match_score", { "leftScore": document.querySelectorAll('.leftFill').length,
+                                          "rightScore": document.querySelectorAll('.rightFill').length});
+        });
+        square.addEventListener('mousedown', event => {
+            if (event.button === 1) {
+                event.preventDefault();
+            }
+        });
+        square.addEventListener('auxclick', (event) => {
+            if (event.button !== 1) return;
+            event.preventDefault();
+            square.classList.add("neutralFill");
+            square.classList.remove("rightFill", "leftFill");
+            sendToServer("match_score", { "leftScore": document.querySelectorAll('.leftFill').length,
+                                          "rightScore": document.querySelectorAll('.rightFill').length});
+        });
+    });
+}
+
 function sendToServer(type, message) {
-    websocket.send(JSON.stringify({
+    server_ws.send(JSON.stringify({
         "source": WS_SOURCE,
         "timestamp": Date.now(),
         "type": type,
@@ -72,12 +110,12 @@ function launchGameReader() {
     nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
 }
 
-function launchAutomarker() {
-    console.log("Launching automarker...");
+function launchKevingo() {
+    console.log("Launching kevingo...");
     const teamLeftID = document.getElementById("leftMultiLink").value;
     const teamRightID = document.getElementById("rightMultiLink").value;
     console.log(`Team Left ID: ${teamLeftID}, Team Right ID: ${teamRightID}`);
-    nodecg.sendMessage('launch-automarker', {"ID1": teamLeftID, "ID2": teamRightID});
+    nodecg.sendMessage('launch-kevingo', {"ID1": teamLeftID, "ID2": teamRightID});
 }
 
 function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000") {
@@ -107,23 +145,26 @@ function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000"
     return textColor;
 }
 
-function saveTeamInfo(team) {
-    const teamData = {
-        name: document.getElementById(`${team.toLowerCase()}TeamName`).value,
-        player1: {
-            name: document.getElementById(`top${team}Name`).value,
-            pronouns: document.getElementById(`top${team}Pronouns`).value,
-        },
-        player2: {
-            name: document.getElementById(`bottom${team}Name`).value,
-            pronouns: document.getElementById(`bottom${team}Pronouns`).value,
-        },
-        inputColor: document.getElementById(`${team.toLowerCase()}InColor`).value,
-        outputColor: document.getElementById(`${team.toLowerCase()}OutColor`).value,
-        multiLink: document.getElementById(`${team.toLowerCase()}MultiLink`).value,
-    };
-    teamsData[`${team}Team`] = teamData;
-    console.log(`Saved ${team} team info:`, teamData);
+function saveTeamInfo() {
+    ["Left", "Right"].forEach(team => {
+        const teamData = {
+            name: document.getElementById(`${team.toLowerCase()}TeamName`).value,
+            player1: {
+                name: document.getElementById(`top${team}Name`).value,
+                pronouns: document.getElementById(`top${team}Pronouns`).value,
+            },
+            player2: {
+                name: document.getElementById(`bottom${team}Name`).value,
+                pronouns: document.getElementById(`bottom${team}Pronouns`).value,
+            },
+            inputColor: document.getElementById(`${team.toLowerCase()}InColor`).value,
+            outputColor: document.getElementById(`${team.toLowerCase()}OutColor`).value,
+            multiLink: document.getElementById(`${team.toLowerCase()}MultiLink`).value,
+        };
+        document.querySelector(":root").style.setProperty(`--${team.toLowerCase()}-color`, teamData.outputColor);
+        teamsData[`${team}Team`] = teamData;
+        console.log(`Saved ${team} team info:`, teamData);
+    });
     sendToServer("team_data_update", teamsData);
 }
 

@@ -13,6 +13,10 @@
     --group-color-focus: #fff;
     --group-border-focus: var(--input-border-focus);
     --group-background-focus: #141d36;
+
+    --left-color: #12AF12;
+    --right-color: #AF12AF;
+    --neutral-color: #F0F0F0;
 }
 
 
@@ -82,6 +86,40 @@ html, body {
     width: 30%;
     height: 100%;
     background-color: #9400D3; /* dark violet */
+}
+
+#matchScoreControls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+}
+
+.match-score-square {
+    width: 30px;
+    height: 30px;
+    background: var(--neutral-color);
+    border: 2px solid #000000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform .15s ease;
+}
+
+.match-score-square:hover {
+    transform: scale(1.1);
+}
+
+.leftFill {
+    background-color: var(--left-color);
+}
+
+.neutralFill {
+    background-color: var(--neutral-color);
+}
+
+.rightFill {
+    background-color: var(--right-color);
 }
 
 .teamInfo {

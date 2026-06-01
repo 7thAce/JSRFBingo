@@ -1,9 +1,10 @@
-// Or just `nodecg` for short. Like this!:
-nodecg.log.info("Here we go now, on the offense.");
 const WS_SOURCE = "Display"
 const server_ws = new WebSocket("ws://localhost:7135");
 let gameTimerTick = null;
 players = {};
+let DISPLAYTIME = 30000;
+let MAXSPLITDIFF = 25000;
+
 
 function sendToServer(type, message) {
     server_ws.send(JSON.stringify({
@@ -68,6 +69,10 @@ server_ws.addEventListener("message", (event) => {
         case "event_feed_update":
             console.log("Received event feed update: ", messageData.message);
             createGameFeed(messageData.message);
+            break;
+        case "match_score":
+            console.log("Received match score update: ", messageData.message);
+            updateMatchScore(messageData.message);
             break;
         // case "square_marked":
         //     console.log("Received square marked: ", messageData.message);
@@ -225,16 +230,21 @@ function handleGameStart(startTime) {
         updateGameTime(startTime);
         updatePlayerLocationDurations();
     }, 250);
-    document.getElementById("gameTime").style.color = "#fff";
+    let digitElements = document.querySelectorAll(".timerDigit");
+    digitElements.forEach(element => {
+        element.style.color = "#fff";
+    });
 }
 
 function handleGameEnd(endTime) {
     if (gameTimerTick) {
-        // updateGameTime(endTime);
+        let digitElements = document.querySelectorAll(".timerDigit");
+        digitElements.forEach(element => {
+            element.style.color = "#ffbf00";
+        });
         clearInterval(gameTimerTick);
         gameTimerTick = null;
     }
-    document.getElementById("gameTime").style.color = "#ffbf00";
     // Style the timer.
 }
 
@@ -257,7 +267,6 @@ function gameTimeToDigits(timeString) {
 
 function displayPlayerLocations() {
     Object.entries(players).forEach(([key, value]) => {
-        console.log(key + " is in location " + value.location);
         document.getElementById(`${key}Location`).textContent = value.location;
     });
 }
@@ -270,8 +279,6 @@ function updateScores(scoreDict) {
 function createGameFeed(allEvents) {
     let innerHTML = "";
     allEvents.forEach(event => {
-        console.log("This event is:");
-        console.log(event);
         if (event.sectionalArray.length > 2) {
             [topText, midText, botText] = triTextFromBaseText(event.sectionalArray[4]);
             event.sectionalArray[4] = `${topText} ${midText}`;
@@ -287,17 +294,54 @@ function createGameFeed(allEvents) {
             }
         }
         event.displayText = event.sectionalArray.filter(item => item !== null).join("\u00A0");
-        console.log("Display text is");
-        console.log(event.displayText);
         if (event.displayText.length > 0) {
             innerHTML += (event.displayText + "<br>");
         }
     });
-    document.getElementById("eventFeed").innerHTML = innerHTML;
+    document.getElementById("eventFeed").innerHTML = innerHTML.split("<br>").slice(-4).join("<br>");
 }
 
 function wrapInColorSpan(text, color) {
     return `<span style="font-weight: bold; color: ${color};">${text}</span>`;
+}
+
+function updateMatchScore(matchScoreData) {
+    let leftTeamScore = matchScoreData.leftScore;
+    let rightTeamScore = matchScoreData.rightScore;
+    document.querySelector("#Bo5-L1").setAttribute("class", "neutralColor");
+    document.querySelector("#Bo5-L2").setAttribute("class", "neutralColor");
+    document.querySelector("#Bo5-5").setAttribute("class", "neutralColor")
+    document.querySelector("#Bo5-R2").setAttribute("class", "neutralColor");
+    document.querySelector("#Bo5-R1").setAttribute("class", "neutralColor");
+    
+    document.querySelector("#Bo3-L1").setAttribute("class", "neutralColor");
+    document.querySelector("#Bo3-3").setAttribute("class", "neutralColor");
+    document.querySelector("#Bo3-R1").setAttribute("class", "neutralColor");
+
+
+    if (leftTeamScore >= 1) {
+        document.querySelector("#Bo5-L1").setAttribute("class", "leftColor");
+        document.querySelector("#Bo3-L1").setAttribute("class", "leftColor");
+    }
+    if (leftTeamScore >= 2) {
+        document.querySelector("#Bo5-L2").setAttribute("class", "leftColor");
+        document.querySelector("#Bo3-3").setAttribute("class", "leftColor");
+    }
+    if (leftTeamScore >= 3) {
+        document.querySelector("#Bo5-5").setAttribute("class", "leftColor");
+    }
+
+    if (rightTeamScore >= 1) {
+        document.querySelector("#Bo5-R1").setAttribute("class", "rightColor");
+        document.querySelector("#Bo3-R1").setAttribute("class", "rightColor");
+    }
+    if (rightTeamScore >= 2) {
+        document.querySelector("#Bo5-R2").setAttribute("class", "rightColor");
+        document.querySelector("#Bo3-3").setAttribute("class", "rightColor");
+    }
+    if (rightTeamScore >= 3) {
+        document.querySelector("#Bo5-5").setAttribute("class", "rightColor");
+    }
 }
 
 function handleSquareMark(squareMarkData) {
@@ -357,37 +401,39 @@ function updateTapeData(tapeTeamsDict) {
 }
 
 function updatePlayerLocationDurations() {
+    if (!gameTimerTick) return;
     Object.entries(players).forEach(([key, player]) => {
-        let DISPLAYTIME = 20000;
         let duration = Date.now() - player.enterTime;
-        // console.log(`Duration: ${duration} || Player enter time: ${player.enterTime} || Now: ${Date.now()}`);
-        if (duration < 100000000000) {
-            player.elements.duration.textContent = timestampToString(duration, "%m:%s");
-            if (duration >= DISPLAYTIME && player.elements.location.textContent != "Garage") {
-                player.elements.duration.classList.remove("retractedLeftShort");
-            } else {
-                player.elements.duration.classList.add("retractedLeftShort");
-            }
-            if (duration >= 15000) {
-                player.elements.split.classList.add("retractedLeftShort");
-            }
+        if (duration > 100000000000) return;
+
+        player.elements.duration.textContent = timestampToString(duration, "%m:%s");
+        if (duration >= DISPLAYTIME && player.elements.location.textContent != "Garage") {
+            player.elements.duration.classList.remove("retractedLeftShort");
+        } else {
+            player.elements.duration.classList.add("retractedLeftShort");
+        }
+        if (duration >= 15000) {
+            player.elements.split.classList.add("retractedLeftShort");
         }
     });
 }
 
 function displaySplitData(splitData) {
+    if (!gameTimerTick) return;
+
     Object.entries(players).forEach(([key, player]) => {
-        console.log("player is");
-        console.log(player);
-        console.log(`${player.name.name} vs. ${splitData.ahead.player} and vs. ${splitData.behind.player}`);
-        let timeDiff = splitsData.behind.enterTime - splitsData.ahead.enterTime;
-        if (player.name.name == splitData.ahead.player) {
-            console.log("AHEAD PROC");
+        if (player.location == "Garage") continue;
+        let playerData = splitData.find(p => p.player == player.name.name);
+        if (playerData == undefined) {
+            continue;
+        }
+
+        let timeDiff = splitData[0].enterTime - player.enterTime;
+        if (timeDiff == 0) {
             player.elements.split.textContent = `First!`;
             player.elements.split.classList.remove("retractedLeftShort");
-        } else if (player.name.name == splitData.behind.player) {
-            console.log("BEHIND PROC");
-            player.elements.split.textContent = timestampToString(timeDiff, "%s:%c")
+        } else{
+            player.elements.split.textContent = timestampToString(timeDiff, "+%s.%c")
             player.elements.split.classList.remove("retractedLeftShort");
         }
     });
@@ -403,19 +449,13 @@ function displayGraffitiChevron(teamsData) {
     let rightTeam = teamsData.rightTeam;
     let board = teamsData.board; // We sneakily pass it through here to use.
     // let levelProg = leftTeam.levelProgress;
-
-    console.log("board is")
-    console.log(board);
     Object.entries(players).forEach(([key, player]) => {
         if (board.graffitiList.includes(player.location)) {
-            if (key.startsWith("t")) {
+            if (key.endsWith("l")) { // this is the worst implementation ever.
                 levelProg = leftTeam.graffitiProgress[player.location];
             } else {
                 levelProg = rightTeam.graffitiProgress[player.location];
             }
-            console.log(leftTeam);
-            console.log("level prog is");
-            console.log(levelProg);
             player.elements.graffiti.classList.remove("retractedLeftLong");
             player.elements.graffiti.textContent = `${levelProg.completeGraffiti.length}/${levelProg.maxGraffiti}`;
         } else {
@@ -591,26 +631,12 @@ function setGameDataTexts(boardData, teamData, pointsToWin) {
 }
 
 function updateGameState(gameState) {
-    console.log("This is where I'd update the game state... ");
-    console.log(typeof(gameState));
-    // Let's break all of these down into their own functions.
-    // calcGameTime(gameState.timestamp);
-    // calcScoreToWin(gameState.board);
-    // calcPointsPerArea(gameState.board);
-    // updateGameFeed(gameState.gameFeed);
-    // checkForGameSet(gameState.teams); //maybe?
-
-    // Note that this isn't good because if we change the format in one place, we won't change it here.
-    // On that end, we should, in the future request the data from the server rather than GIMME ALL.
     if (gameState.inProgress) {
-        console.log("Game is in progress")
         if (!gameTimerTick) {
             console.log("start time is " + gameState.startTime);
             handleGameStart(gameState.startTime);
         }
     }
-    console.log("Think it's a ref");
-    console.log(gameState);
     updateBoardVisuals(gameState, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
     updateAllLocations({"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1], "board": gameState.board});
     createGameFeed(gameState.events);

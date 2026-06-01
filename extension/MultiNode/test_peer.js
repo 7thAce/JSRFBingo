@@ -42,7 +42,7 @@ process.on('message', (message) => {
         });
 
         conn.on("data", (data) => {
-            console.log(`Received data: ${data}`);
+            // console.log(`Received data: ${data}`);
             process.send({ type: 'data', data: data });
         });
     });

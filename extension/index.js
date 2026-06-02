@@ -1284,7 +1284,7 @@ class Graffiti {
 // Util functions
 {
 
-const removeKey = (obj, keyToRemove) => {
+function removeKey(obj, keyToRemove) {
     const { [keyToRemove]: _, ...rest } = obj;
     return rest;
 };

@@ -49,7 +49,7 @@ class TeamGameReader {
             } else if (message.type === 'connected') {
                 console.log(`[${this.multiID}] Connection to ${this.multiID} established in child process.`);
             } else if (message.type === 'error') {
-                console.error(`Connection error in child: ${message.error}`);
+                console.error(`Connection error in child: ${JSON.stringify(message.error)}`);
             }
         });
     }

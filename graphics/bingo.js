@@ -422,10 +422,10 @@ function displaySplitData(splitData) {
     if (!gameTimerTick) return;
 
     Object.entries(players).forEach(([key, player]) => {
-        if (player.location == "Garage") continue;
+        if (player.location == "Garage") return;
         let playerData = splitData.find(p => p.player == player.name.name);
         if (playerData == undefined) {
-            continue;
+            return;
         }
 
         let timeDiff = splitData[0].enterTime - player.enterTime;

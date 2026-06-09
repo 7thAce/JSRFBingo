@@ -170,16 +170,15 @@ module.exports = function(nodecg) {
     });
 
     nodecg.listenFor('launch-kevingo', (idData) => {
-        nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
-        nodecg.log.info("Launching Kevingo with parameters...");
-        kevingoReader = launchKevingoReader(idData.ID1, idData.ID2);
+        // nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
+        nodecg.log.info(`Launching Kevingo (${idData})...`);
+        kevingoReader = launchKevingoReader(idData);
     });
 
     nodecg.listenFor('launch-game-reader', (idData) => {
         nodecg.log.info("Launching Game Reader!");
-        gameReader = launchGameReader(idData.id);
-        // TODO: Store the game reader to the left or right team based on ID.
-        // Alternatively, we can just send left or right and grab the ID from the team object.
+        let gameReader = launchGameReader(idData.id);
+        getTeamFromID(idData.id).gameReader = gameReader;
     });
 
 
@@ -356,8 +355,8 @@ function handleMessage(message) {
         case "kill_combo":
             handleKillCombo(message["message"]);
             return;
-        case "automarker_forward":
-            handleAutomarkerForward(message["message"]);
+        case "automarker_players":
+            handleAutomarkerPlayersUpdate(message["message"]);
             return;
         case "match_score":
             handleMatchScoreUpdate(message["message"]);
@@ -400,6 +399,8 @@ function handleBoardUpdate(boardData) {
     let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
     let filteredEvents = currentBingoGame.events.filter(event => eventsToInclude.includes(event.type));
     filteredEvents.forEach(event => event.toDisplayText({"timeFormat": "%m:%s"}));
+    console.log("Filtered events:");
+    console.log(filteredEvents);
     publish("event_feed_update", filteredEvents);
     return;
 }
@@ -454,9 +455,9 @@ function handleChatMessage(message) {
 
 function handleSquareMark(squareMarkData) {
     console.log("Received square mark event!");
-    console.log(squareMarkData)
+    console.log(squareMarkData);
     squareMarkData.square = currentBingoGame.board.getSquareFromIndex(squareMarkData.index);
-    squareMarkData.team = removeKey(squareMarkData.team, "grafftiProgress");
+    // squareMarkData.team = removeKey(squareMarkData.team, "grafftiProgress");
     let event = new GameEvent(EVENT_TYPES.MARK_SQUARE, squareMarkData);
     return;
 }
@@ -551,16 +552,16 @@ function handleTeamDataUpdate(message) {
     
     publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     // publish("game_state_update", currentBingoGame.toJson());
-    // TODO: Call update on board.
 }
 
 function handleKillCombo(message) {
+    getTeamFromID(message["teamID"]).resetData();
     // do we just want to gen a new game and set the teams?
     return;
 }
 
-function handleAutomarkerForward(message) {
-    console.log("I'll forward this in the future.");
+function handleAutomarkerPlayersUpdate(message) {
+    console.log("This is the list of players from automarker. We should populate the dashboard with it.");
     // kevingoServer.send("automarker_forward", message["message"]);
     return;
 }
@@ -584,8 +585,7 @@ function determinePlayerSplits(enteringPlayerData) {
         if (player.location == enteringPlayerData.location) {
             console.log(`Detected ${player.name} in the same location as ${enteringPlayerData.name}.`);
             splitBuild.push({"player": player.name, "enterTime": player.enterTime});
-            // let event = new GameEvent("PLAYER_SPLIT", {});
-            // TODO: We need to handle 3+ people by sending not ahead and behind, but all players in the location and their timestamps.
+            //TODO: let event = new GameEvent("PLAYER_SPLIT", {});
         } else {
             console.log(`Detected ${player.name} in different locations as ${enteringPlayerData.name}.`);
         }
@@ -845,17 +845,6 @@ class BingoGame {
     startTime = 0;
     hasBeenArchived = false;
     // regions = [];
-
-    // constructor (_boardData, _teamData) {
-    //     this.bingoCount = 0;
-    //     this.inProgress = false;
-    //     this.events = [];
-    //     this.gameFeed = ["", "", "Waiting for bingo..."];
-    //     this.chatLog = [];
-    //     this.teams = [new Team(_teamData["leftTeam"], _teamData["rightTeam"])]; // check names
-    //     this.board = new Board(_boardData);
-    //     this.regions = [new Region("Shibuya"), new Region("Kogane"), new Region("Benten")] // TODO: not what we want?
-    // }
 
     constructor() {
         this.bingoCount = 0;
@@ -1285,6 +1274,8 @@ class Graffiti {
 {
 
 function removeKey(obj, keyToRemove) {
+    console.log("obj is ")
+    console.log(obj);
     const { [keyToRemove]: _, ...rest } = obj;
     return rest;
 };

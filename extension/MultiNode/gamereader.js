@@ -48,6 +48,7 @@ class TeamGameReader {
                 this.ParseGameData(JSON.parse(message.data));
             } else if (message.type === 'connected') {
                 console.log(`[${this.multiID}] Connection to ${this.multiID} established in child process.`);
+                sendToServer("automarker_connect", {"multiID": this.multiID});
             } else if (message.type === 'error') {
                 console.error(`Connection error in child: ${JSON.stringify(message.error)}`);
             }
@@ -218,7 +219,7 @@ function HandlePlayerRegister(playerName, playerIndex, teamObj) {
     
     const players = teams.map(team => team.players).flat();
     const playerNames = players.filter(player => player.name !== "").map(player => player.name);
-    sendToServer("automarker_forward", JSON.stringify({type : "set_automark", data : {names : playerNames}}));
+    sendToServer("automarker_players", JSON.stringify({type : "set_automark", "data": {"teamID": teamObj.multiID, names: playerNames}}));
 }
 
 function HandleTagSprayed(levelID, graffitiID, tagID, playerIndex, teamObj) {

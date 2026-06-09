@@ -57,12 +57,14 @@ div {
     width: 236px;
     height: 35px;
     font-size: 24px;
+    justify-content: center;
 }
 
 .playerPronouns {
     width: 129px;
     height: 25px;
     font-size: 16px;
+    justify-content: center;
 }
 
 #leftTopPlayer {
@@ -144,6 +146,12 @@ div {
     background-image: url("gfx/graffitiicon.png");
     background-size: 94px;
 }
+
+.graffitiSquareInverted {
+    background-image: url("gfx/graffitiicon_inverted.png");
+    background-size: 94px;
+}
+
 
 .location {
     background-image: url('gfx/chevronLocation.svg');

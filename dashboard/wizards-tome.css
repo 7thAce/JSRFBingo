@@ -96,6 +96,18 @@ html, body {
     padding: 12px;
 }
 
+.kevingo-button-row {
+    display: flex;
+    gap: 0;
+    width: 100%;
+}
+
+.kevingo-button-row .kevingo-launch {
+    flex: 1 1 0;
+    width: 25%;
+    box-sizing: border-box;
+}
+
 .match-score-square {
     width: 30px;
     height: 30px;

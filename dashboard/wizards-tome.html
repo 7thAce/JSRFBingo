@@ -84,7 +84,12 @@
 			<div id="gameState" class="panel"></div>
 			<div id="chat" class="panel"></div>
 			<div id="gameControls" class="panel">
-				<button id="launchKevingoConnectionButton" onclick="launchKevingo()">Launch Kevingo</button>
+				<div class="kevingo-button-row">
+					<button class="kevingo-launch" onclick="launchKevingo('bango')">Launch Bango</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bingo')">Launch Bingo</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bongo')">Launch Bongo</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bungo')">Launch Bungo</button>
+				</div>
 				<button id="launchGameReaderButton" onclick="launchGameReader()">Connect to players multi links</button>
 				<br>Use these for match score! Left, Center, and Right click for the teams!
 				<div id="matchScoreControls" class="match-score-controls">

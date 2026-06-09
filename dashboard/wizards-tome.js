@@ -110,12 +110,12 @@ function launchGameReader() {
     nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
 }
 
-function launchKevingo() {
+function launchKevingo(kevingoWSURL) {
     console.log("Launching kevingo...");
     const teamLeftID = document.getElementById("leftMultiLink").value;
     const teamRightID = document.getElementById("rightMultiLink").value;
     console.log(`Team Left ID: ${teamLeftID}, Team Right ID: ${teamRightID}`);
-    nodecg.sendMessage('launch-kevingo', {"ID1": teamLeftID, "ID2": teamRightID});
+    nodecg.sendMessage('launch-kevingo', kevingoWSURL);
 }
 
 function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000") {

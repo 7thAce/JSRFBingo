@@ -28,13 +28,14 @@ const LIGHTCOLORS = Object.freeze({
     "#ffffff": "SERVER"
 })
 
-function launchKevingoReader() {
-    kevingo = new WebSocket("wss://chit.kevcyg.net");
+function launchKevingoReader(kevingoWSURL) {
+    kevingo = new WebSocket(kevingoWSURL);
     nodecgServer = new WebSocket('ws://localhost:7135');
 
     kevingo.onopen = () => {
         console.log("Connected to WebSocket server");
         kevingo.send(JSON.stringify({ username : argarray[0] }));
+        sendToServer("kevingo_connect", kevingoWSURL);
     };
 
     nodecgServer.onopen = () => {

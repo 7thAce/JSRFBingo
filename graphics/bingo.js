@@ -92,7 +92,7 @@ server_ws.addEventListener("message", (event) => {
 });
 
 class DisplayPlayer {
-    location = "Uninit...";
+    location = "Waiting...";
     enterTime = 0;
     name = "";
 
@@ -120,16 +120,6 @@ function updateTeamData2(teamsData) {
     console.log(teamsData);
     let leftTeam = teamsData.leftTeam;
     let rightTeam = teamsData.rightTeam;
-    // leftyTeam = teamsData[0];
-    // rightyTeam = teamsData[1];
-    // TODO: set player names
-    console.log("left team is");
-    console.log(leftTeam);
-
-    console.log("right team is");
-    console.log(rightTeam);
-
-    // TODO: Break these into their own functions becuase they're causing some level of conflict.
 
     document.querySelector(":root").style.setProperty("--left-color", leftTeam.displayData.outputColor);
     document.querySelector(":root").style.setProperty("--right-color", rightTeam.displayData.outputColor);
@@ -144,13 +134,22 @@ function updateTeamData2(teamsData) {
     document.getElementById("leftTopPronouns").textContent = leftTeam.displayData.player1.pronouns;
     document.getElementById("leftBottomPronouns").textContent = leftTeam.displayData.player2.pronouns;
     document.getElementById("leftTeamScore").textContent = String(leftTeam.score).padStart(2, '0');
+    document.getElementById("leftTopPlayer").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
+    document.getElementById("leftBottomPlayer").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
+    document.getElementById("leftTopPronouns").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
+    document.getElementById("leftBottomPronouns").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
+
 
     document.getElementById("rightTeamName").textContent = rightTeam.displayData.name;
     document.getElementById("rightTopPlayer").textContent = rightTeam.displayData.player1.name;
     document.getElementById("rightBottomPlayer").textContent = rightTeam.displayData.player2.name;
     document.getElementById("rightTopPronouns").textContent = rightTeam.displayData.player1.pronouns;
     document.getElementById("rightBottomPronouns").textContent = rightTeam.displayData.player2.pronouns;
-    document.getElementById("rightTeamScore").textContent = String(rightTeam.score).padStart(2, '0'); //TODO: WHY IS THIS HERE
+    document.getElementById("rightTeamScore").textContent = String(rightTeam.score).padStart(2, '0');
+    document.getElementById("rightTopPlayer").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
+    document.getElementById("rightBottomPlayer").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
+    document.getElementById("rightTopPronouns").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
+    document.getElementById("rightBottomPronouns").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
 
     if (players["tl"]?.name != leftTeam.displayData.player1.name) {
         players["tl"] = new DisplayPlayer(leftTeam.displayData.player1);
@@ -277,8 +276,12 @@ function updateScores(scoreDict) {
 }
 
 function createGameFeed(allEvents) {
+    console.log("Creating game feed with events:");
+    console.log(allEvents);
     let innerHTML = "";
     allEvents.forEach(event => {
+        console.log("Processing event:");
+        console.log(event);
         if (event.sectionalArray.length > 2) {
             [topText, midText, botText] = triTextFromBaseText(event.sectionalArray[4]);
             event.sectionalArray[4] = `${topText} ${midText}`;
@@ -428,7 +431,7 @@ function displaySplitData(splitData) {
             return;
         }
 
-        let timeDiff = splitData[0].enterTime - player.enterTime;
+        let timeDiff =  player.enterTime - splitData[0].enterTime;
         if (timeDiff == 0) {
             player.elements.split.textContent = `First!`;
             player.elements.split.classList.remove("retractedLeftShort");
@@ -545,9 +548,14 @@ function setSquareVisuals(boardSquare, rc, teams) {
     document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare); // Set to contrast.
     document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor; //maybe change to class system
     if (boardSquare.isGraffiti) {
-        document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquare");
+        if (getContrastingTextColor(boardSquare.outputColor) == "#000") {
+            document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquareInverted");
+        } else {
+            document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquare");
+        }
     } else {
         document.getElementById(`square${rc.row}${rc.col}`).classList.remove("graffitiSquare");
+        document.getElementById(`square${rc.row}${rc.col}`).classList.remove("graffitiSquareInverted");
     }
     animateSquareMark(rc, boardSquare.outputColor, teams);
 }
@@ -597,7 +605,6 @@ function animateSquareMark(rc, outputColor, teams) {
 */
 
 function setGameDataTexts(boardData, teamData, pointsToWin) {
-    // TODO: Check if this needs to be removed, it might be done via replicant which might be unnecessary.
     document.getElementById("pointsToWin").textContent = pointsToWin;
     updateTeamData2(teamData);
 
@@ -639,6 +646,7 @@ function updateGameState(gameState) {
     }
     updateBoardVisuals(gameState, {"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1]});
     updateAllLocations({"leftTeam": gameState.teams[0], "rightTeam": gameState.teams[1], "board": gameState.board});
+    console.log("Calling create game feed");
     createGameFeed(gameState.events);
 }
 

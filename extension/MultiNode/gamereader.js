@@ -15,7 +15,7 @@ function launchGameReader(multiID) {
     let gameReader = new TeamGameReader(multiID);
     sendToServer("connect", "Connected");
     readers.push(gameReader);
-    // return gameReader;
+    return gameReader;
 }
 
 class Player {

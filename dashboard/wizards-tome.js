@@ -110,11 +110,13 @@ function launchGameReader() {
     nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
 }
 
-function launchKevingo(kevingoWSURL) {
+function launchKevingo(kevingoWSName) {
     console.log("Launching kevingo...");
     const teamLeftID = document.getElementById("leftMultiLink").value;
     const teamRightID = document.getElementById("rightMultiLink").value;
     console.log(`Team Left ID: ${teamLeftID}, Team Right ID: ${teamRightID}`);
+    let vowelURL = {"bango": "wss://chat.kevcyg.net/", "bingo": "wss://chit.kevcyg.net/", "bongo": "wss://chot.kevcyg.net/", "bungo": "wss://chut.kevcyg.net/"};
+    let kevingoWSURL = vowelURL[kevingoWSName];
     nodecg.sendMessage('launch-kevingo', kevingoWSURL);
 }
 

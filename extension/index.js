@@ -178,7 +178,7 @@ module.exports = function(nodecg) {
     nodecg.listenFor('launch-game-reader', (idData) => {
         nodecg.log.info("Launching Game Reader!");
         let gameReader = launchGameReader(idData.id);
-        getTeamFromID(idData.id).gameReader = gameReader;
+        // getTeamFromID(idData.id).gameReader = gameReader;
     });
 
 
@@ -470,11 +470,7 @@ function handleSquareUnmark(squareUnmarkData) {
 }
 
 function handleTagSprayed(graffitiData) { // Single graffiti 
-    // let event = new GameEvent(EVENT_TYPES.SPRAY_GRAFFITI, graffitiData); // I don't think I want this, it might be too cluttering.
-    
-    // handleMessage({"type": "graffiti_completed", "message": graffitiData}); // Update graffiti data to correct info
     let team = getTeamFromID(graffitiData.teamID);
-    // console.log(team["graffitiProgress"]);
     let levelProgressObj = team["graffitiProgress"][getLevelFromID(graffitiData.levelID)];
     let graffitiObj = levelProgressObj.GetGraffitiByID(graffitiData.graffitiID);
 	if (graffitiObj == null) {
@@ -504,12 +500,7 @@ function handleGraffitiCompleted(teamData, progressData) { // Entire level
 }
 
 function handleTapePickup(tapeData) {
-    let teamID = tapeData.teamID;
-    if (leftTeamData.id == teamID) {
-        leftTeamData.tapeData.push(getTapeFromID(tapeData.tapeID));
-    } else if (rightTeamData.id == teamID) {
-        rightTeamData.tapeData.push(getTapeFromID(tapeData.tapeID));
-    }
+    getTeamFromID(tapeData.teamID).tapeData.push(getTapeFromID(tapeData.tapeID));
     let event = new GameEvent(EVENT_TYPES.COLLECT_TAPE, tapeData);
     publish("tape_update", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
     return;
@@ -531,8 +522,6 @@ function handleCharacterUnlock(characterData) {
 }
 
 function handleTeamDataUpdate(message) {
-    console.log("TDU message");
-    console.log(message);
     leftTeamData["displayData"] = message["message"]["LeftTeam"];
     rightTeamData["displayData"] = message["message"]["RightTeam"];
     leftTeamData.id = getMultiIDOnly(message["message"]["LeftTeam"]["multiLink"]);
@@ -576,9 +565,12 @@ function determinePlayerSplits(enteringPlayerData) {
         return;
     }
     
-    let otherPlayers = [currentBingoGame.teams[0].displayData.player1, currentBingoGame.teams[0].displayData.player2, currentBingoGame.teams[1].displayData.player1, currentBingoGame.teams[1].displayData.player2];
+    let otherPlayers = [currentBingoGame.teams[0].displayData.player1, 
+                        currentBingoGame.teams[0].displayData.player2,
+                        currentBingoGame.teams[1].displayData.player1,
+                        currentBingoGame.teams[1].displayData.player2];
     // I think this works how I want it to, but I might need a check.
-    otherPlayers = otherPlayers.filter(player => player != enteringPlayerData);
+    // otherPlayers = otherPlayers.filter(player => player != enteringPlayerData);
 
     let splitBuild = [];
     otherPlayers.forEach(player => {
@@ -590,6 +582,8 @@ function determinePlayerSplits(enteringPlayerData) {
             console.log(`Detected ${player.name} in different locations as ${enteringPlayerData.name}.`);
         }
     });
+    console.log("Split build is: ");
+    console.log(splitBuild);
     publish("player_split", splitBuild.sort((a, b) => a.enterTime - b.enterTime));
 }
 

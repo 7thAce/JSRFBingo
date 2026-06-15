@@ -422,24 +422,38 @@ function updatePlayerLocationDurations() {
 }
 
 function displaySplitData(splitData) {
-    if (!gameTimerTick) return;
+    // if (!gameTimerTick) return;
 
+    console.log("Split data is");
+    console.log(splitData);
     Object.entries(players).forEach(([key, player]) => {
         if (player.location == "Garage") return;
+
         let playerData = splitData.find(p => p.player == player.name.name);
         if (playerData == undefined) {
             return;
         }
 
-        let timeDiff =  player.enterTime - splitData[0].enterTime;
+        let timeDiff =  playerData.enterTime - splitData[0].enterTime;
+        console.log(`player.enterTime is ${playerData.enterTime} and splitData[0].enterTime is ${splitData[0].enterTime}`);
+        console.log("time diff is " + timeDiff);
         if (timeDiff == 0) {
             player.elements.split.textContent = `First!`;
             player.elements.split.classList.remove("retractedLeftShort");
         } else{
-            player.elements.split.textContent = timestampToString(timeDiff, "+%s.%c")
+            player.elements.split.textContent = timestampToString(timeDiff, "+%s.%c").replace("+0", "+");
             player.elements.split.classList.remove("retractedLeftShort");
         }
     });
+}
+
+function testSplitData() {
+    let testData = [
+        {"player": "7thAce", "enterTime": Date.now()},
+        {"player": "yomsa", "enterTime": Date.now() + 5000},
+        {"player": "jon", "enterTime": Date.now() + 10000},
+    ];
+    displaySplitData(testData);
 }
 
 function handleGraffitiProgress(graffitiData) {
@@ -548,10 +562,14 @@ function setSquareVisuals(boardSquare, rc, teams) {
     document.getElementById(`midtext${rc.row}${rc.col}`).style.color = setSquareTextColor(boardSquare); // Set to contrast.
     document.getElementById(`square${rc.row}${rc.col}`).style.backgroundColor = boardSquare.outputColor; //maybe change to class system
     if (boardSquare.isGraffiti) {
-        if (getContrastingTextColor(boardSquare.outputColor) == "#000") {
-            document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquareInverted");
-        } else {
+        if (boardSquare.outputColor == null) {
             document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquare");
+        } else {
+            if (getContrastingTextColor(boardSquare.outputColor) == "#000") {
+                document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquareInverted");
+            } else {
+                document.getElementById(`square${rc.row}${rc.col}`).classList.add("graffitiSquare");
+            }
         }
     } else {
         document.getElementById(`square${rc.row}${rc.col}`).classList.remove("graffitiSquare");

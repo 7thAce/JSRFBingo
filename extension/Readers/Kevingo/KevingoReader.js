@@ -29,6 +29,8 @@ const LIGHTCOLORS = Object.freeze({
 })
 
 function launchKevingoReader(kevingoWSURL) {
+    let vowel = 
+    console.log("Attempting to launch Kevingo Reader with URL: " + kevingoWSURL);
     kevingo = new WebSocket(kevingoWSURL);
     nodecgServer = new WebSocket('ws://localhost:7135');
 

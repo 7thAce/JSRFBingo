@@ -1,0 +1,246 @@
+<!-- standings.html -->
+<!-- Beatrice Bussell -->
+<!--
+    Pulls from local server and displays the current standings
+    Fixed 1920x1080 resolution intended for use in a broadcast browser source.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+
+        <link rel="stylesheet" href="standings.css">
+    </head>
+
+    <body style="visibility:hidden;">
+
+        <!-- The standings background This thing changes based on what we hear from the data -->
+        <div id="bgdiv"></div>
+
+        <!-- The 'current standings' section -->
+        <div id="standings">
+            <div class="section-title section-title-standings">Current Standings</div>
+
+            <!-- Reference structure, will be overwritten at runntime -->
+
+            <div class="teams">
+                <!--
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+                </div>
+                <div class="team" id="team1">
+                    <div class="team-id">
+                        <div class="team-name">0xSWARM</div>
+                        <div class="team-members">7thAce & Bee</div>
+                    </div>
+                    <div class="match-record">0-0</div>
+                    <div class="game-score">[0-0]</div>
+                    <div class="form-section">
+                        <div class="form-indicator Win">W</div>
+                        <div class="form-indicator Loss">L</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                        <div class="form-indicator">-</div>
+                    </div>
+
+                </div>
+                -->
+
+
+
+            </div>
+
+        </div>
+
+        <!-- The 'RR/Bracket' section -->
+        <div id="bracket">
+            <div class="section-title section-title-round-robin">Round Robin Stage</div>
+
+            <!-- Base structure, will be overwritten at runntime -->
+            <!-- ROUND ROBIN -->
+             <div id="round-robin">
+                <!--
+                <div class="rr-round">
+                    <div class="rr-match">
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-vs">VS</div>
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-score">0-0</div>
+                    </div>
+                    <div class="rr-match">
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-vs">VS</div>
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-score">0-0</div>
+                    </div>
+                </div>
+                <div class="rr-round">
+                    <div class="rr-match">
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-vs">VS</div>
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-score">0-0</div>
+                    </div>
+                    <div class="rr-match">
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-vs">VS</div>
+                        <div class="rr-team">0xS</div>
+                        <div class="rr-score">0-0</div>
+                    </div>
+                </div>
+                </div>
+                 -->
+             </div>
+
+            <div id="playoffs">
+                <div class="playoff-match" id="semifinal1"></div>
+                <div class="playoff-match" id="semifinal2"></div>
+                <div class="playoff-match grand-final" id="finals"></div>
+            </div>
+
+        </div>
+
+    </body>
+
+
+
+    <script>
+        window.JSRFStandings = window.JSRFStandings || {};
+        window.JSRFStandings.config = {
+            ...(window.JSRFStandings.config || {}),
+
+            // Data setup
+            dataSource: "server",
+            jsonPath: "example_standings.json",
+            pollIntervalMs: 0,
+
+            // Display setup
+            showRoundRobin: true,
+            showRounds6And7Only: false,
+            cycleScheduleWindows: true,
+            scheduleDwellMs: 5000
+        };
+    </script>
+    <script src="include/gsap.min.js"></script>
+    <script src="standings-renderer.js"></script>
+    <script src="standings.js"></script>
+</html>

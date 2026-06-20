@@ -39,13 +39,13 @@ html, body {
 #gameInfo {
     width: 50%;
     height: 100%;
-    background-color: #8B0000; /* dark red */
+    background-color: #222222; /* dark red */
 }
 
 #connectionsStatus {
     width: 50%;
     height: 100%;
-    background-color: #8a4c00; /* dark orange */
+    background-color: #808080; /* dark orange */
 }
 
 /* #connectionsTable {
@@ -73,19 +73,19 @@ html, body {
 #gameState {
     width: 45%;
     height: 100%;
-    background-color: #006400; /* dark green */
+    background-color: #222222; /* dark green */
 }
 
 #chat {
     width: 25%;
     height: 100%;
-    background-color: #00008B; /* dark blue */
+    background-color: #333333; /* dark blue */
 }
 
 #gameControls {
     width: 30%;
     height: 100%;
-    background-color: #9400D3; /* dark violet */
+    background-color: #222222; /* dark violet */
 }
 
 #matchScoreControls {
@@ -111,6 +111,9 @@ html, body {
 .match-score-square {
     width: 30px;
     height: 30px;
+    color: black;
+    font-size: 28px;
+    text-align: center;
     background: var(--neutral-color);
     border: 2px solid #000000;
     border-radius: 4px;
@@ -143,11 +146,11 @@ html, body {
 }
 
 #leftTeamInfo {
-    background-color: #FFAAFF;
+    background-color: #AAAAAA;
 }
 
 #rightTeamInfo {
-    background-color: #678EFE;
+    background-color: #A6A6A6;
 }
 
 

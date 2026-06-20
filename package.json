@@ -43,6 +43,18 @@
         "width": 1920,
         "height": 1080,
         "singleInstance": false
+      },
+      {
+        "file": "standings_rr.html",
+        "width": 1920,
+        "height": 1080,
+        "singleInstance": false
+      },
+      {
+        "file": "standings_playoffs.html",
+        "width": 1920,
+        "height": 1080,
+        "singleInstance": false
       }
     ]
   },

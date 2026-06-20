@@ -113,6 +113,7 @@ ws_read.on('connection', function connection(ws) {
 
     publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
     publish("game_state_update", currentBingoGame.toJson());
+    publish("commentators", currentBingoGame.commentators);
     // publish("game_start", currentBingoGame.startTime);
 
     ws.on('message', function incoming(message) {
@@ -361,6 +362,9 @@ function handleMessage(message) {
         case "match_score":
             handleMatchScoreUpdate(message["message"]);
             return;
+        case "commentator_names":
+            handleCommentatorNameUpdate(message["message"]);
+            return;
         default:
             console.warn(`!! Received unhandled message type ${message["type"]}.`);
             return;
@@ -557,6 +561,11 @@ function handleAutomarkerPlayersUpdate(message) {
 
 function handleMatchScoreUpdate(message) {
     publish("match_score", message);
+}
+
+function handleCommentatorNameUpdate(message) {
+    currentBingoGame.commentators = message;
+    publish("commentators", message);
 }
 
 function determinePlayerSplits(enteringPlayerData) {
@@ -838,6 +847,7 @@ class BingoGame {
     board = null;
     startTime = 0;
     hasBeenArchived = false;
+    commentators = {};
     // regions = [];
 
     constructor() {

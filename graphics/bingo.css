@@ -56,15 +56,21 @@ div {
 .playerName {
     width: 236px;
     height: 35px;
-    font-size: 24px;
+    font-weight: bold;
+    font-size: 32px;
     justify-content: center;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
 }
 
 .playerPronouns {
     width: 129px;
     height: 25px;
-    font-size: 16px;
+    font-weight: bold;
+    font-size: 22px;
     justify-content: center;
+    -webkit-text-stroke-width: 0.75px;
+    -webkit-text-stroke-color: black;
 }
 
 #leftTopPlayer {
@@ -384,7 +390,23 @@ div {
     -webkit-text-stroke-color: black;
 }
 
+.commsBox {
+    left: 735px;
+    width: 462px;
+    height: 45px;
+    color: white;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    font-style: italic;
+}
 
+#comms1 {
+    top: 988px;
+}
+
+#comms2 {
+    top: 1033px;
+}
 
 .squareanimationleft {
     animation-duration: 0.75s;

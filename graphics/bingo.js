@@ -74,6 +74,10 @@ server_ws.addEventListener("message", (event) => {
             console.log("Received match score update: ", messageData.message);
             updateMatchScore(messageData.message);
             break;
+        case "commentators":
+            console.log("Received commentator names update: ", messageData.message);
+            updateCommentatorNames(messageData.message);
+            break;
         // case "square_marked":
         //     console.log("Received square marked: ", messageData.message);
         //     handleSquareMark(messageData.message);
@@ -345,6 +349,11 @@ function updateMatchScore(matchScoreData) {
     if (rightTeamScore >= 3) {
         document.querySelector("#Bo5-5").setAttribute("class", "rightColor");
     }
+}
+
+function updateCommentatorNames(message) {
+    document.getElementById("comms1").textContent = message["comm1"];
+    document.getElementById("comms2").textContent = message["comm2"];
 }
 
 function handleSquareMark(squareMarkData) {

@@ -1,0 +1,515 @@
+:root {
+    --canvas-width: 1920px;
+    --canvas-height: 1080px;
+
+    /* in a happy world a new layout means we just have to adjust these numbers surely :3 */
+    /* 
+        This is really funny in a world where i was given SVG files but... well i did this
+        before i had those lmao    
+    */
+    --standings-left: 600px;
+    --standings-top: 94px;
+    --standings-row-height: 52px;
+    --standings-row-gap: 36px;
+    --standings-team-width: 524px;
+    --standings-team-details-top: 56px;
+    --standings-score-width: 108px;
+    --standings-column-gap: 20px;
+    --form-cell-size: 52px;
+    --form-cell-gap: 4px;
+
+
+    --rr-left: 498px;
+    --rr-top: 919px;
+    --rr-schedule-box-width: 278px;
+    --rr-schedule-box-height: 209px;
+    --rr-schedule-box-left-offset: -20px;
+    --rr-schedule-box-top-offset: -44px;
+    --rr-team-width: 184px;
+    --rr-score-width: 72px;
+    --rr-column-gap: 33px;
+    --rr-score-gap: 0px;
+    --rr-row-height: 36px;
+    --rr-row-gap: 4px;
+    --rr-opponents-text-offset: 0px;
+    --rr-text-y-offset: 3px;
+    --rr-vs-width: 34px;
+
+    --playoff-semi-top: 905px;
+    --playoff-semi-left: 493px;
+    --playoff-semi-right-left: 1609px;
+    --playoff-final-left: 1050px;
+    --playoff-final-top: 955px;
+    --playoff-row-height: 45px;
+    --playoff-row-gap: 5px;
+    --playoff-semi-team-width: 250px;
+    --playoff-semi-score-width: 45px;
+    --playoff-final-team-width: 300px;
+    --playoff-cell-radius: 6px;
+
+    /* Give these to ecla! */
+    --text-dark: #000000;
+    --text-muted: #303030;
+    --text-light: #f1f1f1;
+    --text-vs: #d6a82c;
+
+
+    --section-title-color: #a6ff00;
+
+    --win-color: #17E651; 
+    --loss-color: #ff3333;
+}
+
+html,
+body {
+    font-family: "Be Vietnam Pro", "Bai Jamjuree", "Segoe UI Black", Helvetica, Arial, sans-serif;
+    margin: 0;
+    width: var(--canvas-width);
+    height: var(--canvas-height);
+    overflow: hidden;
+    background: transparent;
+    color: var(--text-dark);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#bgdiv {
+    z-index: -10;
+    width: var(--canvas-width);
+    height: var(--canvas-height);
+    left: 0px;
+    top: 0px;
+    position: absolute;
+    pointer-events: none;
+}
+
+.bg-layer {
+    position: absolute;
+    inset: 0;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: var(--canvas-width) var(--canvas-height);
+    opacity: 0;
+    will-change: opacity;
+}
+
+.bg-layer.is-visible {
+    opacity: 1;
+}
+
+.bg-layer.has-inline-svg {
+    background-image: none;
+}
+
+.standings-frame {
+    display: block;
+    width: var(--canvas-width);
+    height: var(--canvas-height);
+}
+
+#standings,
+#bracket {
+    position: absolute;
+    inset: 0;
+    width: var(--canvas-width);
+    height: var(--canvas-height);
+    pointer-events: none;
+}
+
+.teams {
+    position: absolute;
+    left: var(--standings-left);
+    top: var(--standings-top);
+    display: flex;
+    flex-direction: column;
+    gap: var(--standings-row-gap);
+}
+
+.section-title {
+    position: absolute;
+    z-index: 2;
+    height: 54px;
+    padding: 4px 42px 0 30px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 0 100%);
+    background: #000000;
+    color: var(--section-title-color);
+    font-size: 42px;
+    font-weight: 900;
+    font-style: italic;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.section-title-standings {
+    left: 480px;
+    top: 12px;
+    width: 685px;
+}
+
+.section-title-round-robin {
+    left: 480px;
+    top: 804px;
+    width: 685px;
+}
+
+.section-title.is-hidden {
+    visibility: hidden;
+}
+
+.team {
+    display: grid;
+    grid-template-columns:
+        var(--standings-team-width)
+        var(--standings-score-width)
+        var(--standings-score-width)
+        calc((var(--form-cell-size) * 7) + (var(--form-cell-gap) * 6));
+    column-gap: var(--standings-column-gap);
+    align-items: stretch;
+    height: var(--standings-row-height);
+}
+
+.team-id,
+.match-record,
+.game-score,
+.form-indicator,
+.rr-match,
+.rr-score {
+    min-width: 0;
+}
+
+.team-id {
+    position: relative;
+    height: var(--standings-row-height);
+    overflow: visible;
+}
+
+.team-name {
+    position: absolute;
+
+    
+    left: 0;
+    top: 0;
+    display: block;
+    overflow: hidden;
+    width: var(--standings-team-width);
+    height: var(--standings-row-height);
+    padding: 0 5px;
+    color: var(--text-dark);
+    /* font-family: "Jet Set"; */
+    font-size: 40px;
+    font-weight: 900;
+    font-style: Italic;
+    line-height: var(--standings-row-height);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-members {
+    position: absolute;
+    left: 10px;
+    top: var(--standings-team-details-top);
+    overflow: hidden;
+    width: 260px;
+    color: var(--text-light);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.match-record,
+.game-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    
+
+    padding-top: 5px;
+
+    color: var(--text-dark);
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.game-score {
+    font-size: 31px;
+    font-weight: 500;
+}
+
+.form-section {
+    display: grid;
+    grid-template-columns: repeat(7, var(--form-cell-size));
+    gap: var(--form-cell-gap);
+    height: var(--standings-row-height);
+}
+
+.form-indicator {
+    position: relative;
+    display: flex;
+
+    /* Both of these are bullshit 'feels right' numbers */
+    padding-top: 5px;
+    border-radius: 8px;
+    
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--text-dark);
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+    text-transform: uppercase;
+}
+
+.form-indicator.Win {
+    background: var(--win-color);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.24);
+    color: var(--text-light);
+    text-shadow: 0 1px 1px rgba(0, 65, 18, 0.32);
+}
+
+.form-indicator.Loss {
+    background: var(--loss-color);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.24);
+    color: #ffe8e8;
+    text-shadow: 0 1px 1px rgba(35, 0, 0, 0.4);
+}
+
+#round-robin {
+    position: absolute;
+    left: var(--rr-left);
+    top: var(--rr-top);
+    display: block;
+    width: calc(
+        (5 * (var(--rr-team-width) + var(--rr-score-gap) + var(--rr-score-width)))
+        + (4 * var(--rr-column-gap))
+    );
+    height: calc((4 * var(--rr-row-height)) + (3 * var(--rr-row-gap)));
+}
+
+#round-robin.is-hidden {
+    visibility: hidden;
+}
+
+.rr-layer {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(5, calc(var(--rr-team-width) + var(--rr-score-gap) + var(--rr-score-width)));
+    column-gap: var(--rr-column-gap);
+    align-items: start;
+    opacity: 0;
+    will-change: opacity;
+}
+
+.rr-layer.is-visible {
+    opacity: 1;
+}
+
+.rr-round {
+    position: relative;
+    display: grid;
+    grid-auto-rows: var(--rr-row-height);
+    row-gap: var(--rr-row-gap);
+}
+
+.rr-round-bg {
+    position: absolute;
+    left: var(--rr-schedule-box-left-offset);
+    top: var(--rr-schedule-box-top-offset);
+    z-index: -1;
+    width: var(--rr-schedule-box-width);
+    height: var(--rr-schedule-box-height);
+    background-image: url("gfx/schedulebox.svg");
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    pointer-events: none;
+}
+
+.rr-round-label {
+    position: absolute;
+    left: calc(var(--rr-schedule-box-left-offset) + 14px);
+    top: calc(var(--rr-schedule-box-top-offset) + 2px);
+    z-index: 0;
+    width: 180px;
+    height: 38px;
+    overflow: hidden;
+    color: var(--text-light);
+    font-size: 27px;
+    font-weight: 900;
+    font-style: italic;
+    line-height: 38px;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.rr-match {
+    display: flex;
+    align-items: center;
+    width: calc(var(--rr-team-width) + var(--rr-score-gap) + var(--rr-score-width));
+    height: var(--rr-row-height);
+    overflow: hidden;
+}
+
+.rr-team,
+.rr-vs,
+.rr-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--text-muted);
+
+    
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.rr-team {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    left: var(--rr-opponents-text-offset);
+    top: var(--rr-text-y-offset);
+    min-width: 0;
+    height: var(--rr-row-height);
+    padding: 0 4px;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    text-overflow: ellipsis;
+}
+
+#playoffs {
+    position: absolute;
+    inset: 0;
+}
+
+#playoffs.is-hidden {
+    visibility: hidden;
+}
+
+.playoff-match {
+    position: absolute;
+    display: grid;
+    grid-auto-rows: var(--playoff-row-height);
+    row-gap: var(--playoff-row-gap);
+    --po-team-width: var(--playoff-semi-team-width);
+    --po-score-width: var(--playoff-semi-score-width);
+}
+
+#semifinal1 {
+    left: var(--playoff-semi-left);
+    top: var(--playoff-semi-top);
+}
+
+#semifinal2 {
+    left: var(--playoff-semi-right-left);
+    top: var(--playoff-semi-top);
+}
+
+#finals {
+    left: var(--playoff-final-left);
+    top: var(--playoff-final-top);
+    --po-team-width: var(--playoff-final-team-width);
+    --po-score-width: 0px;
+}
+
+.po-team-info {
+    display: grid;
+    grid-template-columns: var(--po-team-width) var(--po-score-width);
+    column-gap: var(--playoff-row-gap);
+    width: calc(var(--po-team-width) + var(--po-score-width) + var(--playoff-row-gap));
+}
+
+.grand-final .po-team-info {
+    grid-template-columns: var(--po-team-width);
+    width: var(--po-team-width);
+}
+
+.po-team,
+.po-score {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: var(--playoff-row-height);
+    padding: 0 12px;
+    overflow: hidden;
+    color: var(--text-dark);
+    font-size: 34px;
+    font-weight: 900;
+    font-style: italic;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.po-team {
+    justify-content: flex-start;
+}
+
+.po-score {
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 32px;
+    font-style: normal;
+    border-radius: var(--playoff-cell-radius);
+}
+
+.rr-team:first-child {
+    text-align: center;
+}
+
+.rr-vs {
+    position: relative;
+    flex: 0 0 var(--rr-vs-width);
+    left: var(--rr-opponents-text-offset);
+    top: var(--rr-text-y-offset);
+    color: var(--text-vs);
+
+    /* Chromium Text outline (OBS likes this) */
+    -webkit-text-stroke: 1px black;
+    font-size: 20px;
+}
+
+.rr-vs + .rr-team {
+    text-align: center;
+}
+
+.rr-score {
+    flex: 0 0 var(--rr-score-width);
+    position: relative;
+    left: 4px;
+    top: var(--rr-text-y-offset);
+    height: var(--rr-row-height);
+    margin-left: var(--rr-score-gap);
+    padding: 0 0 3px;
+    color: var(--text-light);
+    font-size: 25px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    text-overflow: clip;
+}

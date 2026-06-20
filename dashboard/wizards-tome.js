@@ -50,6 +50,14 @@ window.addEventListener('load', () => {
             document.getElementById("rightMultiLink").value = savedData["RightTeam"]["multiLink"] || "";
         }
     }
+    document.getElementById("commentator1").addEventListener('input', (event) => {
+        sendToServer("commentator_names", {"comm1": document.getElementById("commentator1").value,
+                                           "comm2": document.getElementById("commentator2").value});
+    });
+    document.getElementById("commentator2").addEventListener('input', (event) => {
+        sendToServer("commentator_names", {"comm1": document.getElementById("commentator1").value,
+                                           "comm2": document.getElementById("commentator2").value});
+    });
     initMatchScoreControls();
 });
 

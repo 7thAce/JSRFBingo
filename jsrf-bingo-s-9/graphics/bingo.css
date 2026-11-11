@@ -1,0 +1,493 @@
+:root {
+    --left-color: #12AF12;
+    --right-color: #AF12AF;
+    --mcolor: #CC0000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+body {
+    font-family: "Be Vietnam Pro", "Segoe UI Black", Helvetica, Arial, sans-serif;
+    font-size: 30px;
+}
+
+svg {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -5;
+    width: 1920px;
+    height: 1080px;
+}
+
+div {
+    position: absolute;
+    color: #FFF;
+}
+
+.rightText {
+    display: flex;
+    justify-content: right;
+}
+
+.leftText {
+    display: flex;
+    justify-content: left;
+}
+
+#gameDiv {
+    background-color: transparent;
+}
+
+#leftTeamSVG {
+    left: 0px;
+}
+
+#rightTeamSVG {
+    left: 742px;
+}
+
+.playerName {
+    width: 236px;
+    height: 35px;
+    font-weight: bold;
+    font-size: 32px;
+    justify-content: center;
+    -webkit-text-stroke-width: 2px;
+    -webkit-text-stroke-color: black;
+}
+
+.playerPronouns {
+    width: 129px;
+    height: 25px;
+    font-weight: bold;
+    font-size: 22px;
+    justify-content: center;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+}
+
+#leftTopPlayer {
+    left: 10px;
+    top: 510px;
+}
+
+#leftBottomPlayer {
+    left: 10px;
+    top: 1045px;
+}
+
+#leftTopPronouns {
+    left: 252px;
+    top: 520px;
+}
+
+#leftBottomPronouns {
+    left: 252px;
+    top: 1055px;
+}
+
+#rightTopPlayer {
+    left: 1679px;
+    top: 510px;
+}
+
+#rightBottomPlayer {
+    left: 1679px;
+    top: 1045px;
+}
+
+#rightTopPronouns {
+    left: 1539px;
+    top: 520px;
+}
+
+#rightBottomPronouns {
+    left: 1539px;
+    top: 1055px;
+}
+
+/* HUD boxes */
+
+#topLeftHUD {
+    top: 0px;
+    left: 0px;
+}
+
+#bottomLeftHUD {
+    top: 535px;
+    left: 0px;
+}
+
+#topRightHUD {
+    top: 0px;
+    left: 1199px;
+}
+
+#bottomRightHUD {
+    top: 535px;
+    left: 1199px;
+}
+
+.chevron {
+    top: 0px;
+    left: 5px;
+    height: 150px;
+    width: 300px;
+    position: absolute;
+    font-weight: bold;
+    font-family: "Bai Jamjuree";
+    transition: left 1s ease-in-out;
+    text-align: left;
+    color: black;
+}
+
+.graffitiSquare {
+    background-image: url("gfx/graffitiicon.png");
+    background-size: 94px;
+}
+
+.graffitiSquareInverted {
+    background-image: url("gfx/graffitiicon_inverted.png");
+    background-size: 94px;
+}
+
+
+.location {
+    background-image: url('gfx/chevronLocation.svg');
+    padding-left: 5px;
+    font-size: 23px;
+    padding-top: 18px;
+    z-index: -15;
+}
+
+.split {
+    background-image: url('gfx/chevronDuration.svg');
+    padding-left: 195px;
+    font-size: 26px;
+    padding-top: 16px;
+    color: #CC0000;
+    z-index: -15;
+}
+
+.duration {
+    background-image: url('gfx/chevronDuration.svg');
+    padding-left: 198px;
+    font-size: 28px;
+    padding-top: 16px;
+    z-index: -15;
+}
+
+.tape {
+    background-image: url('gfx/chevronNoTape.svg');
+    z-index: -15;
+}
+
+.graffitiProgress {
+    background-image: url('gfx/chevronGraffiti.svg');
+    padding-left: 135px;
+    font-size: 32px;
+    padding-top: 61px;
+    z-index: -15;
+}
+
+.retractedLeftShort {
+    left: -137px;
+}
+
+.retractedLeftLong {
+    left: -161px;
+}
+
+#leftDuration {
+    transition: left 1s ease-in-out;
+}
+
+#rightDuration {
+    transition: right 1s ease-in-out;
+}
+
+
+
+
+.infoBox {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 40px;
+    width: 126px;
+    height: 49px;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+.infoBox .timerDigit {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.strokeMain {
+    color: white;
+}
+
+.strokeInverted {
+    color: #ffbf00;
+}
+
+#gameTime {
+    left: 759px;
+    top: 116px;
+}
+
+.timerDigit {
+    width: 29px;
+}
+
+#gameTimeColon {
+    width: 10px;
+}
+
+#pointsToWin {
+    left: 1035px;
+    top: 116px;
+}
+
+.teamName {
+    display: flex;
+    width: 374px;
+    height: 46px;
+    font-size: 36px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+.teamScore {
+    display: flex;
+    width: 70px;
+    height: 38px;
+    font-size: 40px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+#leftTeamScore {
+    left: 728px;
+    top: 209px;
+}
+
+#leftTeamName {
+    left: 802px;
+    top: 205px;
+    justify-content: left;
+}
+
+#rightTeamScore {
+    left: 1124px;
+    top: 265px;
+}
+
+#rightTeamName {
+    left: 745px;
+    top: 261px;
+}
+
+#bgdiv {
+    background-image: url("gfx/s8_center_panel.png");
+    /* background-image: url("gfx/s8_center_panel_coords.png"); */
+    z-index: -10;
+    width: 1920px;
+    height: 1080px;
+    left: 0px;
+    top: 0px;
+    position: absolute;
+    background-repeat: no-repeat;
+}
+
+#board {
+    background-color: #000;
+    font-weight: normal;
+    height: 476px;
+    width: 476px;
+    top: 337px;
+    left: 723px;
+
+    display: inline-block;
+    position: absolute;
+    font-size: 14px;
+    font-family: "Bai Jamjuree",Helvetica,Arial,sans-serif;
+    /* visibility: hidden; */
+}
+
+.square {
+    height: 94px;
+    width: 94px;
+    position: relative;
+    float: left;
+    margin-top: 1px;
+    margin-left: 1px;
+    padding-top: 0px;
+    border: 0px solid;
+    background-color: #111;
+    color: #fff;
+    text-align: center;
+}
+
+.areaPoints {
+    display: flex;
+    position: absolute;
+    width: 30px;
+    height: 24px;
+    top: 811px;
+    font-size: 20px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+}
+
+#shibuyaPoints {
+    left: 810px;
+}
+
+#koganePoints {
+    left: 930px;
+}
+
+#bentenPoints {
+    left: 1050px;
+}
+
+#defaultPoints {
+    left: 1167px;
+}
+
+#eventFeed {
+    display: block;
+    left: 723px;
+    top: 838px;
+    width: 470px;
+    height: 76px;
+    text-align: left;
+    font-size: 18px;
+    font-weight: normal;
+    padding-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    line-height: 1.3;
+    color: black;
+    -webkit-text-stroke-width: 0.3px;
+    -webkit-text-stroke-color: black;
+}
+
+.commsBox {
+    left: 735px;
+    width: 462px;
+    height: 45px;
+    color: white;
+    -webkit-text-stroke-width: 1.0px;
+    -webkit-text-stroke-color: black;
+    font-weight: bold;
+    font-style: italic;
+}
+
+#comms1 {
+    top: 988px;
+    color: #FE9802;
+}
+
+#comms2 {
+    top: 1033px;
+    color: #AAE802;
+}
+
+.squareanimationleft {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkleft;
+}
+
+.squareanimationright {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkright;
+}
+
+@keyframes squaremarkleft {
+    from {
+        box-shadow: 0px 0px 30px 25px var(--left-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--left-color);
+        background-color: var(--left-color);
+        z-index: 0;
+    }
+}
+
+@keyframes squaremarkright {
+    from {
+        box-shadow: 0px 0px 20px 15px var(--right-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--right-color);
+        background-color: var(--right-color);
+        z-index: 0;
+    }
+}
+
+.square .toptext {
+    width: 100%;
+    margin-top: 5px;
+    height: 25px;
+    position: relative;
+    float: left;
+    font-size: 18px;
+    font-style: italic;
+    font-weight: bold;
+    -webkit-text-stroke-width: 0.2px;
+    -webkit-text-stroke-color: black;
+    /* text-shadow: -0.5px 0.5px 1px white; */
+}
+
+.square .midtext {
+    width: calc(100% - 4px);
+    height: 48px;
+    position: relative;
+    float: left;
+    display: flex;
+    padding-left: 2px;
+    padding-right: 2px;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    z-index: 1;
+}
+
+.squaretext .midtext .default {
+    color: #DD0;
+}
+
+.square .bottext {
+    /* ackground-color: #550000; */
+    width: calc(100% - 2px);
+    height: 15px;
+    position: relative;
+    float: left;
+    padding-right: 2px;
+    font-size: 10px;
+    display: flex;
+    justify-content: right;
+    align-items: flex-end;
+    font-style: italic;
+    color: #BBB;
+}

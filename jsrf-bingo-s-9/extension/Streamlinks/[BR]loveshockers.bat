@@ -1,0 +1,1 @@
+streamlink --title VLC-LoveShockersBR twitch.tv/jsrfbingoloveshockers best --twitch-low-latency

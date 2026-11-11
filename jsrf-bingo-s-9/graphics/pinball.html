@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="pinball.css">
+	</head>
+	<body>
+		<div id="bgdiv"></div>
+
+		<div id="gameDiv">
+			<svg id="leftTeamSVG" version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" visibility="hidden">
+				<style>
+					.leftColor { fill: var(--left-color); }
+					.neutralColor { fill: #F0F0F0; } 
+					.rightColor { fill: var(--right-color); }
+					.s0 { fill: #cccccc } 
+				</style>
+				<path id="LEFT TEAM" fill-rule="evenodd" class="leftColor" d="m0 0h720v205q0 0 0 0v-10c0 5.52 4.48 10 10 10h438c5.52 0 10 4.48 10 10v26c0 5.52-4.48 10-10 10h-438c-5.52 0-10 4.48-10 10v-10q0 0 0 0v289 540c-5.63 0-480.37 0-486 0h-234zm715 530v-515c0-5.52-4.48-10-10-10h-690c-5.52 0-10 4.48-10 10v485c0 5.52 4.48 10 10 10 4.12 0 9.18 0 15 0 51.73 0 163.05 0 201 0 0.65 0 12.99 0 12.99 0q0 0.02 0 0.05c5.06 0.49 9.01 4.76 9.01 9.95h127c5.52 0 10 4.48 10 10 0 5.52 4.48 10 10 10h305c5.52 0 10-4.48 10-10zm12-288c0 2.76 2.24 5 5 5h60c2.76 0 5-2.24 5-5v-28c0-2.76-2.24-5-5-5h-60c-2.76 0-5 2.24-5 5zm-722 313v480c0 5.52 4.48 10 10 10q0 0 0 0c52.26 0 175.69 0 216 0 0.65 0 12.99 0 12.99 0q0 0.02 0 0.05c5.06 0.49 9.01 4.76 9.01 9.95h127c5.52 0 10 4.48 10 10 0 5.52 4.48 10 10 10h305c5.52 0 10-4.48 10-10v-510c0-5.52-4.48-10-10-10h-690c-5.52 0-10 4.48-10 10z"/>
+			</svg>
+			<svg id="rightTeamSVG" version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" visibility="hidden">
+				<style>
+					.leftColor { fill: var(--left-color); }
+					.neutralColor { fill: #F0F0F0; } 
+					.rightColor { fill: var(--right-color); }
+					.s0 { fill: #cccccc }
+				</style>
+				<path id="RIGHT TEAM" fill-rule="evenodd" class="rightColor" d="m458 307q0 0 0 0v10c0-5.52-4.48-10-10-10h-438c-5.52 0-10-4.48-10-10v-26c0-5.52 4.48-10 10-10h438c5.52 0 10-4.48 10-10v10q0 0 0 0v-261h720v1080c-5.63 0-384.37 0-390 0h-330v-540zm330 223c0-5.52 4.48-10 10-10h127c0-5.19 3.95-9.46 9.01-9.95q0-0.03 0-0.05 0.01 0 0.99 0c37.95 0 161.27 0 213 0h15c5.52 0 10-4.48 10-10v-485c0-5.52-4.48-10-10-10h-690c-5.52 0-10 4.48-10 10v515c0 5.52 4.48 10 10 10h305c5.52 0 10-4.48 10-10zm-337-260c0-2.76-2.24-5-5-5h-60c-2.76 0-5 2.24-5 5v28c0 2.76 2.24 5 5 5h60c2.76 0 5-2.24 5-5zm712 275h-690c-5.52 0-10 4.48-10 10v510c0 5.52 4.48 10 10 10h305c5.52 0 10-4.48 10-10 0-5.52 4.48-10 10-10h127c0-5.19 3.95-9.46 9.01-9.95q0-0.03 0-0.05 0.01 0 0.99 0c37.95 0 161.27 0 213 0h15c5.52 0 10-4.48 10-10v-480c0-5.52-4.48-10-10-10z"/>
+			</svg>
+			<div id="leftTopPlayer" class="playerName">7thAce</div>
+			<div id="leftBottomPlayer" class="playerName">Fatalr0ck</div>
+			<div id="rightTopPlayer" class="playerName rightText">7thAce</div>
+			<div id="rightBottomPlayer" class="playerName rightText">Bee</div>
+
+			<div id="leftTopPronouns" class="playerPronouns">he/him</div>
+			<div id="leftBottomPronouns" class="playerPronouns">he/him</div>
+			<div id="rightTopPronouns" class="playerPronouns rightText">she/her</div>
+			<div id="rightBottomPronouns" class="playerPronouns rightText">she/her</div>
+
+			<div id="leftTeamName" class="teamName">Cook or be Cooked</div>
+			<div id="leftTeamScore" class="teamScore">04</div>
+			<div id="rightTeamName" class="teamName rightText">0xSWARM</div>
+			<div id="rightTeamScore" class="teamScore">07</div>
+			<div id="gameTime" class="infoBox strokeMain">
+				<div id="gameTimeDigit1" class="timerDigit">-</div>
+				<div id="gameTimeDigit2" class="timerDigit">-</div>
+				<div id="gameTimeColon" class="timerDigit">:</div>
+				<div id="gameTimeDigit3" class="timerDigit">-</div>
+				<div id="gameTimeDigit4" class="timerDigit">-</div>
+			</div>
+			<div id="matchScore" class="infoBox"></div>
+			<div id="pointsToWin" class="infoBox">15</div>
+
+			<div id="board">
+				<div id="square00" class="square unmarked"><div id="toptext00" class="squaretext toptext"></div><div id="midtext00" class="squaretext midtext"></div><div id="bottext00" class="squaretext bottext"></div></div>
+				<div id="square01" class="square unmarked"><div id="toptext01" class="squaretext toptext"></div><div id="midtext01" class="squaretext midtext"></div><div id="bottext01" class="squaretext bottext"></div></div>
+				<div id="square02" class="square unmarked"><div id="toptext02" class="squaretext toptext"></div><div id="midtext02" class="squaretext midtext"></div><div id="bottext02" class="squaretext bottext"></div></div>
+				<div id="square03" class="square unmarked"><div id="toptext03" class="squaretext toptext"></div><div id="midtext03" class="squaretext midtext"></div><div id="bottext03" class="squaretext bottext"></div></div>
+				<div id="square04" class="square unmarked"><div id="toptext04" class="squaretext toptext"></div><div id="midtext04" class="squaretext midtext"></div><div id="bottext04" class="squaretext bottext"></div></div>
+
+				<div id="square10" class="square unmarked"><div id="toptext10" class="squaretext toptext"></div><div id="midtext10" class="squaretext midtext"></div><div id="bottext10" class="squaretext bottext"></div></div>
+				<div id="square11" class="square unmarked"><div id="toptext11" class="squaretext toptext"></div><div id="midtext11" class="squaretext midtext"></div><div id="bottext11" class="squaretext bottext"></div></div>
+				<div id="square12" class="square unmarked"><div id="toptext12" class="squaretext toptext"></div><div id="midtext12" class="squaretext midtext"></div><div id="bottext12" class="squaretext bottext"></div></div>
+				<div id="square13" class="square unmarked"><div id="toptext13" class="squaretext toptext"></div><div id="midtext13" class="squaretext midtext"></div><div id="bottext13" class="squaretext bottext"></div></div>
+				<div id="square14" class="square unmarked"><div id="toptext14" class="squaretext toptext"></div><div id="midtext14" class="squaretext midtext"></div><div id="bottext14" class="squaretext bottext"></div></div>
+				
+				<div id="square20" class="square unmarked"><div id="toptext20" class="squaretext toptext"></div><div id="midtext20" class="squaretext midtext"></div><div id="bottext20" class="squaretext bottext"></div></div>
+				<div id="square21" class="square unmarked"><div id="toptext21" class="squaretext toptext"></div><div id="midtext21" class="squaretext midtext"></div><div id="bottext21" class="squaretext bottext"></div></div>
+				<div id="square22" class="square unmarked"><div id="toptext22" class="squaretext toptext"></div><div id="midtext22" class="squaretext midtext"></div><div id="bottext22" class="squaretext bottext"></div></div>
+				<div id="square23" class="square unmarked"><div id="toptext23" class="squaretext toptext"></div><div id="midtext23" class="squaretext midtext"></div><div id="bottext23" class="squaretext bottext"></div></div>
+				<div id="square24" class="square unmarked"><div id="toptext24" class="squaretext toptext"></div><div id="midtext24" class="squaretext midtext"></div><div id="bottext24" class="squaretext bottext"></div></div>
+
+				<div id="square30" class="square unmarked"><div id="toptext30" class="squaretext toptext"></div><div id="midtext30" class="squaretext midtext"></div><div id="bottext30" class="squaretext bottext"></div></div>
+				<div id="square31" class="square unmarked"><div id="toptext31" class="squaretext toptext"></div><div id="midtext31" class="squaretext midtext"></div><div id="bottext31" class="squaretext bottext"></div></div>
+				<div id="square32" class="square unmarked"><div id="toptext32" class="squaretext toptext"></div><div id="midtext32" class="squaretext midtext"></div><div id="bottext32" class="squaretext bottext"></div></div>
+				<div id="square33" class="square unmarked"><div id="toptext33" class="squaretext toptext"></div><div id="midtext33" class="squaretext midtext"></div><div id="bottext33" class="squaretext bottext"></div></div>
+				<div id="square34" class="square unmarked"><div id="toptext34" class="squaretext toptext"></div><div id="midtext34" class="squaretext midtext"></div><div id="bottext34" class="squaretext bottext"></div></div>
+
+				<div id="square40" class="square unmarked"><div id="toptext40" class="squaretext toptext"></div><div id="midtext40" class="squaretext midtext"></div><div id="bottext40" class="squaretext bottext"></div></div>
+				<div id="square41" class="square unmarked"><div id="toptext41" class="squaretext toptext"></div><div id="midtext41" class="squaretext midtext"></div><div id="bottext41" class="squaretext bottext"></div></div>
+				<div id="square42" class="square unmarked"><div id="toptext42" class="squaretext toptext"></div><div id="midtext42" class="squaretext midtext"></div><div id="bottext42" class="squaretext bottext"></div></div>
+				<div id="square43" class="square unmarked"><div id="toptext43" class="squaretext toptext"></div><div id="midtext43" class="squaretext midtext"></div><div id="bottext43" class="squaretext bottext"></div></div>
+				<div id="square44" class="square unmarked"><div id="toptext44" class="squaretext toptext"></div><div id="midtext44" class="squaretext midtext"></div><div id="bottext44" class="squaretext bottext"></div></div>
+			</div>
+			<div id="shibuyaPoints" class="areaPoints">00</div>
+			<div id="koganePoints" class="areaPoints">00</div>
+			<div id="bentenPoints" class="areaPoints">00</div>
+			<div id="defaultPoints" class="areaPoints">00</div>
+			<div id="eventFeed">0:00 Game Started
+				<br>0:20 Miku_ds marked Shibuya Top of Bus aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+				<br>0:41 7thAce marked RDH Grind x 10
+			</div>
+			<div id="twitchChat"></div>
+			<div id="comms1" class="commsBox"></div>
+			<div id="comms2" class="commsBox"></div>
+		</div>
+
+		<div id="topLeftHUD" class="HUD">
+			<div id="areaStatus">
+				<div id="tlDuration" class="sliderLeft duration chevron retractedLeftShort">
+				0:00
+				</div>
+
+				<div id="tlSplit" class="split chevron retractedLeftShort">
+				+-.--
+				</div>
+
+				<div id="tlLocation" class="location chevron">
+				Garage
+				</div>
+
+				<div id="tlGraffiti" class="graffitiProgress chevron retractedLeftLong">
+				None
+				</div>
+
+				<div id="tlTape" class="tape chevron">
+				</div>
+			</div>
+			<!-- Other HUD elements go here -->
+			</div>
+
+			<div id="bottomLeftHUD" class="HUD">
+			<div id="areaStatus">
+				<div id="blDuration" class="sliderLeft duration chevron retractedLeftShort">
+				0:00
+				</div>
+
+				<div id="blSplit" class="split chevron retractedLeftShort">
+				+-.--
+				</div>
+
+				<div id="blLocation" class="location chevron">
+				Garage
+				</div>
+
+				<div id="blGraffiti" class="graffitiProgress chevron retractedLeftLong">
+				None
+				</div>
+
+				<div id="blTape" class="tape chevron">
+				</div>
+			</div>
+			<!-- Other HUD elements go here -->
+			</div>
+
+			<div id="topRightHUD" class="HUD">
+			<div id="areaStatus">
+				<div id="trDuration" class="sliderLeft duration chevron retractedLeftShort">
+				0:00
+				</div>
+
+				<div id="trSplit" class="split chevron retractedLeftShort">
+				+-.--
+				</div>
+
+				<div id="trLocation" class="location chevron">
+				Garage
+				</div>
+
+				<div id="trGraffiti" class="graffitiProgress chevron retractedLeftLong">
+				None
+				</div>
+
+				<div id="trTape" class="tape chevron">
+				</div>
+			</div>
+			<!-- Other HUD elements go here -->
+			</div>
+
+			<div id="bottomRightHUD" class="HUD">
+			<div id="areaStatus">
+				<div id="brDuration" class="sliderLeft duration chevron retractedLeftShort">
+				0:00
+				</div>
+
+				<div id="brSplit" class="split chevron retractedLeftShort">
+				+-.--
+				</div>
+
+				<div id="brLocation" class="location chevron">
+				Garage
+				</div>
+
+				<div id="brGraffiti" class="graffitiProgress chevron retractedLeftLong">
+				None
+				</div>
+
+				<div id="brTape" class="tape chevron">
+				</div>
+			</div>
+			<!-- Other HUD elements go here -->
+			</div>
+	</body>
+	<script src="bingo.js"></script>
+</html>

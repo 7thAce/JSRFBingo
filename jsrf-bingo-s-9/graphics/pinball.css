@@ -1,0 +1,382 @@
+:root {
+    --left-color: #12AF12;
+    --right-color: #AF12AF;
+    --mcolor: #CC0000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+body {
+    font-family: "Be Vietnam Pro", "Segoe UI Black", Helvetica, Arial, sans-serif;
+    font-size: 30px;
+}
+
+svg {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -5;
+    width: 1920px;
+    height: 1080px;
+}
+
+div {
+    position: absolute;
+    color: #FFF;
+}
+
+.rightText {
+    display: flex;
+    justify-content: right;
+}
+
+.leftText {
+    display: flex;
+    justify-content: left;
+}
+
+#gameDiv {
+    background-color: transparent;
+}
+
+#leftTeamSVG {
+    left: 0px;
+}
+
+#rightTeamSVG {
+    left: 742px;
+}
+
+.playerName {
+    width: 359px;
+    height: 101px;
+    font-size: 70px;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+.playerPronouns {
+    width: 296px;
+    height: 61px;
+    font-size: 40px;
+    padding-top: 8px;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+}
+
+#leftTopPlayer {
+    left: 341px;
+    top: 727px;
+}
+
+#leftBottomPlayer {
+    left: 1221px;
+    top: 727px;
+}
+
+#leftTopPronouns {
+    left: 4px;
+    top: 720px;
+}
+
+#leftBottomPronouns {
+    left: 1620px;
+    top: 720px;
+}
+
+#rightTopPlayer {
+    visibility: hidden;
+    left: 1679px;
+    top: 510px;
+}
+
+#rightBottomPlayer {
+    visibility: hidden;
+    left: 1679px;
+    top: 1045px;
+}
+
+#rightTopPronouns {
+    visibility: hidden;
+    left: 1539px;
+    top: 520px;
+}
+
+#rightBottomPronouns {
+    visibility: hidden;
+    left: 1539px;
+    top: 1055px;
+}
+
+.infoBox {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 40px;
+    width: 126px;
+    height: 49px;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+.infoBox .timerDigit {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.strokeMain {
+    color: white;
+}
+
+.strokeInverted {
+    color: #ffbf00;
+}
+
+#gameTime {
+    left: 1260px;
+    top: 880px;
+    font-size: 60px;
+}
+
+.timerDigit {
+    width: 48px;
+}
+
+#gameTimeColon {
+    width: 10px;
+}
+
+#pointsToWin {
+    left: 1035px;
+    top: 116px;
+    visibility: hidden;
+}
+
+.teamName {
+    display: flex;
+    width: 374px;
+    height: 46px;
+    font-size: 36px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+    visibility: hidden;
+}
+
+.teamScore {
+    display: flex;
+    width: 213px;
+    height: 94px;
+    font-size: 100px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1.5px;
+    -webkit-text-stroke-color: black;
+}
+
+#leftTeamScore {
+    left: 1221px;
+    top: 975px;
+}
+
+#leftTeamName {
+    left: 802px;
+    top: 205px;
+    justify-content: left;
+}
+
+#rightTeamScore {
+    left: 1124px;
+    top: 265px;
+    visibility: hidden;
+}
+
+#rightTeamName {
+    left: 745px;
+    top: 261px;
+}
+
+#bgdiv {
+    background-image: url("gfx/pinball_layout.png");
+    /* background-image: url("gfx/s8_center_panel_coords.png"); */
+    z-index: -10;
+    width: 1920px;
+    height: 1080px;
+    left: 0px;
+    top: 0px;
+    position: absolute;
+    background-repeat: no-repeat;
+}
+
+#board {
+    background-color: #000;
+    font-weight: normal;
+    height: 467px;
+    width: 516px;
+    top: 609px;
+    left: 702px;
+
+    display: inline-block;
+    position: absolute;
+    font-size: 14px;
+    font-family: "Bai Jamjuree",Helvetica,Arial,sans-serif;
+    /* visibility: hidden; */
+}
+
+.square {
+    height: 92px;
+    width: 102px;
+    position: relative;
+    float: left;
+    margin-top: 1px;
+    margin-left: 1px;
+    padding-top: 0px;
+    border: 0px solid;
+    background-color: #111;
+    color: #fff;
+    text-align: center;
+}
+
+.areaPoints {
+    visibility: hidden;
+    display: flex;
+    position: absolute;
+    width: 30px;
+    height: 24px;
+    top: 811px;
+    font-size: 20px;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+}
+
+#shibuyaPoints {
+    left: 810px;
+}
+
+#koganePoints {
+    left: 930px;
+}
+
+#bentenPoints {
+    left: 1050px;
+}
+
+#defaultPoints {
+    left: 1167px;
+}
+
+#eventFeed {
+    visibility: hidden;
+    display: flex;
+    left: 723px;
+    top: 838px;
+    width: 470px;
+    height: 76px;
+    text-align: left;
+    justify-content: left;
+    font-size: 18px;
+    font-weight: normal;
+    padding-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    align-items: start;
+}
+
+
+
+.squareanimationleft {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkleft;
+}
+
+.squareanimationright {
+    animation-duration: 0.75s;
+    /*animation-fill-mode: forwards; */
+    animation-name: squaremarkright;
+}
+
+@keyframes squaremarkleft {
+    from {
+        box-shadow: 0px 0px 30px 25px var(--left-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--left-color);
+        background-color: var(--left-color);
+        z-index: 0;
+    }
+}
+
+@keyframes squaremarkright {
+    from {
+        box-shadow: 0px 0px 20px 15px var(--right-color);
+        z-index: 5;
+    } to {
+        box-shadow: 0px 0px 0px 0px var(--right-color);
+        background-color: var(--right-color);
+        z-index: 0;
+    }
+}
+
+.square .toptext {
+    width: 100%;
+    margin-top: 5px;
+    height: 25px;
+    position: relative;
+    float: left;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: bold;
+    -webkit-text-stroke-width: 0.2px;
+    -webkit-text-stroke-color: black;
+    /* text-shadow: -0.5px 0.5px 1px white; */
+}
+
+.square .midtext {
+    width: calc(100% - 4px);
+    height: 48px;
+    position: relative;
+    float: left;
+    display: flex;
+    padding-left: 2px;
+    padding-right: 2px;
+    justify-content: center;
+    align-items: center;
+    overflow: visible;
+    z-index: 1;
+}
+
+.squaretext .midtext .default {
+    color: #DD0;
+}
+
+.square .bottext {
+    /* ackground-color: #550000; */
+    width: calc(100% - 2px);
+    height: 15px;
+    position: relative;
+    float: left;
+    padding-right: 2px;
+    font-size: 10px;
+    display: flex;
+    justify-content: right;
+    align-items: flex-end;
+    font-style: italic;
+    color: #BBB;
+}
+
+.HUD {
+    visibility: hidden;
+}
+

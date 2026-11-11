@@ -1,0 +1,2342 @@
+const { exec } = require('child_process');
+const WebSocket = require('ws');
+const fs = require('fs');
+
+const ws_read = new WebSocket.Server({ port: 7135 });
+const WS_SOURCE = "Server"
+
+const { launchKevingoReader } = require("./Readers/Kevingo/KevingoReader.js");
+const { launchAutomarker } = require("./MultiNode/multinode.js");
+const { launchGameReader } = require("./MultiNode/gameconnector.js");
+const { message } = require('git-rev-sync');
+
+const GRAFFITIPOINTS = 3;
+const BINGOPOINTS = 2;
+const SQUAREPOINTS = 1;
+
+const LEVELS = Object.freeze({
+    GARAGE: "Garage",
+    DOGEN: "Dogen",
+    SHIBUYA: "Shibuya",
+	CHUO: "Chuo",
+	HIKAGE: "Hikage",
+	x99TH: "99th",
+	SKYSCRAPER: "SDPP",
+	STADIUM: "Stadium",
+	HWY0: "HWY0",
+	SKYDINO: "Sky Dino",
+	RDH: "RDH",
+	SEWERS: "Sewers",
+	BOTTOMPOINT: "Btm pt.",
+	KIBO: "Kibo",
+	FRZ: "FRZ"
+});
+
+const EVENT_TYPES = Object.freeze({
+    START: "Start",
+    END: "End",
+    PAUSE: "Pause",
+    UNPAUSE: "Unpause",
+    MARK_SQUARE: "Mark Square",
+    UNMARK_SQUARE: "Unmark Square",
+    CHANGE_LOCATION: "Change Location",
+    COLLECT_TAPE: "Pick up Tape",
+    UNLOCK_SOUL: "Unlock Soul",
+    COLLECT_SOUL: "Pick up soul",
+    SPRAY_GRAFFITI: "Spray Graffiti",
+    COMPLETE_GRAFFITI: "Complete Graffiti",
+    COMPLETE_LEVEL_GRAFFITI: "Complete Level Graffiti",
+    CHARACTER_UNLOCK: "Unlock Character",
+    BINGO_SCORED: "Bingo Scored",
+    SNIPE: "Snipe",
+    CHAT: "Chat Message",
+    UNKNOWN: "Other/Unknown"
+});
+
+const STATUSES = Object.freeze({
+    CONNECTED: "Connected",
+    DISCONNECTED: "Disconnected",
+    UNKNOWN: "Unknown",
+    WAITING: "Waiting"
+})
+
+let currentBingoGame = null;
+let leftTeamData = null;
+let rightTeamData = null;
+let kevingo = null;
+
+shibuyaAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE];
+koganeAreas = [LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ];
+bentenAreas = [LEVELS.x99TH, LEVELS.STADIUM, LEVELS.SKYSCRAPER, LEVELS.SKYDINO, LEVELS.HWY0];
+var allAreas = shibuyaAreas.concat(koganeAreas, bentenAreas, [LEVELS.GARAGE, LEVELS.STADIUM]);
+areasDict = {};
+
+// GENERAL TODO:
+// We need to try and pull/request the team data automatically if we can.
+// Or, we leave it cached from a replicant. Unsure.
+
+
+let subscribers = [];
+// nodecg.log.info("Websocket started on port 7Ace");
+// nodecg.log.info("Server version 2")
+
+process.on('uncaughtException', function(err) {
+    console.log(err);
+    setInterval(function(){}, 5000); // Keeps process alive
+});
+
+function init() {
+    leftTeamData = new Team("left");
+    rightTeamData = new Team("right");
+    currentBingoGame = new BingoGame();
+    kevingo = new Kevingo(null, null);
+    allAreas.forEach(area => {
+        areasDict[area] = new LevelMetadata(area);
+    });
+}
+
+function publish(type, message) {
+    let wsSend = {
+        "source": WS_SOURCE,
+        "timestamp": Date.now(),
+        "type": type,
+        "message": message,
+    };
+    if (type != "ping") {
+        // console.log(` <- [${wsSend["source"]} @ ${formatNow(wsSend["timestamp"])}] ${wsSend["type"]}: ${wsSend["message"]}`);
+    }
+
+    subscribers.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(wsSend));
+        }
+    });
+}
+
+ws_read.on('connection', function connection(ws) {
+    subscribers.push(ws);
+    console.log("Received client connection");
+    // Let's push a little more intelligently in the future.
+
+    publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
+    publish("game_state_update", currentBingoGame.toJson());
+    publish("commentators", currentBingoGame.commentators);
+    // publish("game_start", currentBingoGame.startTime);
+
+    ws.on('message', function incoming(message) {
+        try {
+            let jsonMessage = JSON.parse(message);
+            console.log(` -> [${jsonMessage["source"]} @ ${getNow()}] ${jsonMessage["type"]}: ${jsonMessage["message"]}`);
+            // handleIncomingMessageDelay(jsonMessage["delay"], jsonMessage);
+            handleMessage(jsonMessage);
+        } catch (e) { 
+            console.log("Invalid JSON received (from onMessage).");
+            console.log(e);
+        }
+    });
+
+    ws.on("jsrfbingo", function incoming(message) {
+        console.log(message);
+    });
+
+    ws.on('close', function close() {
+        console.log('disconnected');
+        subscribers = subscribers.filter(client => client !== ws);
+        // how do we show this DC on the dashboard? do we need to link the connection ws to a connection and then DC it?
+    })
+});
+
+function requestData(dataName) {
+    return;
+}
+
+// function sendDataToConnection(connectionName) {
+    
+// }
+
+{ // NodeCG listens block
+
+module.exports = function(nodecg) {
+    nodecg.log.info("Launcher extension initialized...");
+    nodecg.log.info("Reminder! I'm index.js in the extension folder!");
+    ncgConfig = nodecg.bundleConfig;
+
+    nodecg.listenFor('launch-server', () => {
+        nodecg.log.info("Launching JSRF Bingo Server...");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Server\\startserver.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Server error: ${error}`);
+                return;
+            }
+        });
+    });
+
+    nodecg.listenFor('launch-client', () => {
+        nodecg.log.info("Launching JSRF Bingo Client...?????");
+        exec('start bundles\\jsrf-bingo-s-8\\extension\\Server\\launchclient.bat', (error, stdout, stderr) => {
+            if (error) {
+                nodecg.log.error(`Client error: ${error}`);
+                return;
+            }
+        });
+    });
+
+    nodecg.listenFor('launch-kevingo', (idData) => {
+        // nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
+        nodecg.log.info(`Launching Kevingo (${idData})...`);
+        kevingo = new Kevingo(idData, launchKevingoReader(idData));
+    });
+
+    nodecg.listenFor('launch-game-reader', (idData) => {
+        nodecg.log.info("Launching Game Reader!");
+        let gameReader = launchGameReader(idData.id);
+        // getTeamFromID(idData.id).gameReader = gameReader;
+    });
+
+
+    // nodecg.listenFor('launch-streamlink-all', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-streamlink-poisonjam', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-streamlink-loveshockers', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-streamlink-pots', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-streamlink-doomriders', () => {
+    //     nodecg.log.info("Launching all streamlinks!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+
+    // nodecg.listenFor('launch-reader-bingosync', () => {
+    //     nodecg.log.info("Launching Bingosync reader into room ${room_id}!");
+    //     exec('start bundles\\jsrf-bingo-s-8\\extension\\Multinode\\launchclient.bat', (error, stdout, stderr) => {
+    //         if (error) {
+    //             nodecg.log.error(`Client error: ${error}`);
+    //             return;
+    //         }
+    //     });
+    // });
+    
+    nodecg.on('close', () => {
+        nodecg.log.info('NodeCG server closed successfully. Performing cleanup tasks...');
+        fs.writeFile("ncgout.txt", "blah blah blah", (err) => {
+            if (err) {
+                console.error("Error saving game archive:", err);
+                return;
+            }
+        });
+    });
+}
+}
+
+function handleIncomingMessageDelay(delay, jsonMessage) {
+    if (delay == null || delay <= 0) {
+        handleMessage(jsonMessage);
+        return;
+    }
+    setTimeout(() => {
+        console.log(`Delayed message: ${JSON.stringify(jsonMessage)}`);
+        handleMessage(jsonMessage);
+    }, delay);
+}
+
+function handleMessage(message) {
+    console.log(message);
+    switch (message["type"]) {
+        case "connect":
+            handleConnect(message);
+            return;
+        case "kevingo_connect":
+            handleKevingoConnect(message);
+            return;
+        case "kevingo_disconnect":
+            handleKevingoDisconnect(message);
+            return;
+        case "new_board":
+            console.log("Received new board data.");
+            handleNewBoard(message["message"]);
+            return;
+        case "board_update":
+            console.log("Received board update.");
+            handleBoardUpdate(message["message"]);
+            return;
+        case "player_connect":
+            console.log("Received player connect.");
+            handlePlayerConnect(message["message"]);
+            return;
+        case "player_disconnect":
+            console.log("Received player disconnect.");
+            handlePlayerDisconnect(message["message"]);
+            return;
+        case "player_name_change":
+            console.log("Received player name change.");
+            handlePlayerNameChange(message["message"]);
+            return;
+        case "player_location_change":
+            console.log("Received player location change.");
+            handlePlayerLocationChange(message["message"]);
+            return;
+        case "start_game":
+            console.log("Starting the game!");
+            handleGameStart(message["message"]["start_time"]);
+            return;
+        case "pause_game":
+            console.log("Pausing the game!");
+            handleGamePause();
+            return;
+        case "unpause_game":
+            console.log("Unpausing the game!");
+            handleGameUnpause();
+            return;
+        case "end_game":
+            console.log("Ending the game!");
+            handleGameEnd();
+            return;
+        case "chat_message":
+            console.log("Received chat message.");
+            handleChatMessage(JSON.parse(message["message"])); // Do we need to send more?
+            return;
+        case "square_marked":
+            console.log("Received square marked.");
+            handleSquareMark(JSON.parse(message["message"]));
+            break;
+        case "square_unmarked":
+            console.log("Received square unmarked.");
+            handleSquareUnmark(JSON.parse(message["message"]));
+            break;
+        case "tag_sprayed":
+            console.log("Received graffiti sprayed.");
+            handleTagSprayed(message["message"]);
+            return;
+        case "graffiti_completed":
+            console.log("Received graffiti completed.");
+            handleGraffitiCompleted(message["message"]);
+            return;
+        case "tape_collected":
+            console.log("Received tape collected.");
+            handleTapePickup(message["message"]);
+            return;
+        case "soul_unlocked":
+            console.log("Received soul unlocked.");
+            handleSoulUnlock(message["message"]);
+            return;
+        case "soul_collected":
+            console.log("Received soul collected.");
+            handleSoulPickup(message["message"]);
+            return;
+        case "character_unlocked":
+            console.log("Received character unlocked.");
+            handleCharacterUnlock(message["message"]);
+            return;
+        case "team_data_update":
+            console.log("Received team data update (from dashboard).");
+            handleTeamDataUpdate(message);
+            return;
+        case "kill_combo":
+            handleKillCombo(message["message"]);
+            return;
+        case "automarker_connect":
+            handleAutomarkerConnect(message["message"]);
+            return;
+        case "automarker_disconnect":
+            handleAutomarkerDisconnect(message["message"]);
+            return;
+        case "automarker_players":
+            handleAutomarkerPlayersUpdate(message["message"]);
+            return;
+        case "match_score":
+            handleMatchScoreUpdate(message["message"]);
+            return;
+        case "commentator_names":
+            handleCommentatorNameUpdate(message["message"]);
+            return;
+        default:
+            console.warn(`!! Received unhandled message type ${message["type"]}.`);
+            return;
+    }
+    // This will handle *every* incoming message from multinode, dashboard, board, etc.
+    return;
+}
+
+// Handlers
+
+function handleConnect(message) {
+    console.log(`Client connected: ${message["source"]}`);
+    return;
+}
+
+function handleKevingoConnect(message) {
+    console.log(`Kevingo client connected: ${message["source"]}`);
+    kevingo.chatUrl = message;
+    kevingo.status = STATUSES.CONNECTED;
+    kevingo.url = "https://bingo.kevcyg.net"; // This will need to be updated with multiple kevingos
+    publish("kevingo_connected", kevingo);
+}
+
+function handleKevingoDisconnect(message) {
+    if (kevingo.chatUrl == message) {
+        console.log(`Kevingo client disconnected: ${message["source"]}`);
+        kevingo.status = STATUSES.DISCONNECTED;
+        kevingo.chatUrl = null;
+        kevingo.url = null;
+        publish("kevingo_disconnected", kevingo);
+        return;
+    }
+    console.warn(`Received disconnect for unknown kevingo chat URL: ${message}`);
+}    
+
+function handleNewBoard(boardData) {
+    archiveCurrentGame();
+    currentBingoGame = new BingoGame(boardData);
+    // we gotta reset team data or at least progress data.
+    console.log("New board data: ", boardData);
+    handleBoardUpdate(boardData);
+    return;
+}
+
+function handleBoardUpdate(boardData) {
+    setBoardData(boardData);
+    Team.allTeamsBingoCount = 0;
+    leftTeamData.countScore(currentBingoGame.board.board);
+    rightTeamData.countScore(currentBingoGame.board.board);
+
+    // TODO: Calculate Max Score for each team, then compare max to current and see if the game should end.
+    publish("score_update", {
+        "leftTeamScore": leftTeamData.score,
+        "rightTeamScore": rightTeamData.score
+    });
+
+    let eventsToInclude = [EVENT_TYPES.START, EVENT_TYPES.END, EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.BINGO_SCORED, EVENT_TYPES.SNIPE];
+    let filteredEvents = currentBingoGame.events.filter(event => eventsToInclude.includes(event.type));
+    filteredEvents.forEach(event => event.toDisplayText({"timeFormat": "%m:%s"}));
+    console.log("Filtered events:");
+    console.log(filteredEvents);
+    publish("event_feed_update", filteredEvents);
+    return;
+}
+
+function handlePlayerConnect(playerData) {
+    // This will mirror multinode and should deal with it all internally.
+    return;
+}
+
+function handlePlayerDisconnect(playerData) {
+    return;
+}
+
+function handlePlayerNameChange(playerData) {
+    return;
+}
+
+function handlePlayerLocationChange(playerData) {
+    let playerObj = getPlayerObjFromName(playerData.player.name);
+    playerObj.location = getLevelFromID(playerData.levelID);
+    playerObj.enterTime = Date.now();
+    let event = new GameEvent(EVENT_TYPES.CHANGE_LOCATION, playerObj);
+
+    determinePlayerSplits(playerObj);
+    publish("player_location_change", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1], "board": currentBingoGame.board});
+    return;
+}
+
+function handleGameStart(startTime=Date.now()) {
+    startTime = Math.trunc(startTime / 1000000); // ns to ms
+    currentBingoGame.startGame(startTime);
+}
+
+function handleGamePause() {
+    return;
+}
+
+function handleGameUnpause() {
+    return;
+}
+
+function handleGameEnd() {
+    currentBingoGame.endGame();
+    archiveCurrentGame();
+}
+
+function handleChatMessage(message) {
+    let event = new GameEvent(EVENT_TYPES.CHAT, message["message"].trim());
+    // publish("chat_message", message["message"]);
+    return;
+}
+
+function handleSquareMark(squareMarkData) {
+    console.log("Received square mark event!");
+    console.log(squareMarkData);
+    squareMarkData.square = currentBingoGame.board.getSquareFromIndex(squareMarkData.index);
+    // squareMarkData.team = removeKey(squareMarkData.team, "grafftiProgress");
+    let event = new GameEvent(EVENT_TYPES.MARK_SQUARE, squareMarkData);
+    return;
+}
+
+function handleSquareUnmark(squareUnmarkData) {
+    console.log("Received square unmark event!");
+    console.log(squareUnmarkData)
+    let event = new GameEvent(EVENT_TYPES.UNMARK_SQUARE, squareUnmarkData);
+    return;
+}
+
+function handleTagSprayed(graffitiData) { // Single graffiti 
+    let team = getTeamFromID(graffitiData.teamID);
+    let levelProgressObj = team["graffitiProgress"][getLevelFromID(graffitiData.levelID)];
+    let graffitiObj = levelProgressObj.GetGraffitiByID(graffitiData.graffitiID);
+	if (graffitiObj == null) {
+		console.log(`Could not find a graffiti in ${levelProgressObj.name} with ID ${graffitiData.graffitiID}.`);
+		return;	
+	}
+
+    let tagCompleteData = graffitiObj.MarkTagAsComplete(graffitiData.tagID);
+    if (tagCompleteData != null) {
+		if (levelProgressObj.MarkGraffitiAsComplete(graffitiObj)) {
+			// Level Complete
+			handleGraffitiCompleted(team, levelProgressObj);
+		} else {
+			// Level incomplete, but tag is complete
+			console.log(`${team.displayData.name}: Currently at ${levelProgressObj.CountGraffiti()} / ${levelProgressObj.maxGraffiti} in ${levelProgressObj.name}.`);
+		}
+        let event = new GameEvent(EVENT_TYPES.COMPLETE_GRAFFITI, {...tagCompleteData, "levelID": graffitiData.levelID, "levelName": getLevelFromID(graffitiData.levelID)});
+        publish("graffiti_progress", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1], "board": currentBingoGame.board});
+	}
+    return;
+}
+
+function handleGraffitiCompleted(teamData, progressData) { // Entire level
+    let event = new GameEvent(EVENT_TYPES.COMPLETE_LEVEL_GRAFFITI, progressData);
+    publish("all_graffiti_completed", progressData);
+    return;
+}
+
+function handleTapePickup(tapeData) {
+    getTeamFromID(tapeData.teamID).tapeData.push(getTapeFromID(tapeData.tapeID));
+    let event = new GameEvent(EVENT_TYPES.COLLECT_TAPE, tapeData);
+    publish("tape_update", {"leftTeam": currentBingoGame.teams[0], "rightTeam": currentBingoGame.teams[1]});
+    return;
+}
+
+function handleSoulUnlock(soulData) {
+    let event = new GameEvent(EVENT_TYPES.UNLOCK_SOUL, soulData);
+    return;
+}
+
+function handleSoulPickup(soulData) {
+    let event = new GameEvent(EVENT_TYPES.COLLECT_SOUL, soulData);
+    return;
+}
+
+function handleCharacterUnlock(characterData) {
+    let event = new GameEvent(EVENT_TYPES.CHARACTER_UNLOCK, characterData);
+    return;
+}
+
+function handleTeamDataUpdate(message) {
+    leftTeamData["displayData"] = message["message"]["LeftTeam"];
+    rightTeamData["displayData"] = message["message"]["RightTeam"];
+    leftTeamData.id = getMultiIDOnly(message["message"]["LeftTeam"]["multiLink"]);
+    rightTeamData.id = getMultiIDOnly(message["message"]["RightTeam"]["multiLink"]);
+
+    // Recolor the board.
+    for (let i = 0; i < 25; i++) {
+        let boardSquare = currentBingoGame.board.getSquareFromIndex(i);
+
+        for (let team of currentBingoGame.teams) {
+            if (team.displayData.inputColor == boardSquare.inputColor) {
+                boardSquare.outputColor = team.displayData.outputColor;
+                // do we need a clear condition or do they all swap properly?
+            }
+        }
+    }
+    
+    publish("team_data_update", {"leftTeam": leftTeamData, "rightTeam": rightTeamData});
+    // publish("game_state_update", currentBingoGame.toJson());
+}
+
+function handleKillCombo(message) {
+    getTeamFromID(message["teamID"]).resetData();
+    // do we just want to gen a new game and set the teams?
+    return;
+}
+
+function handleAutomarkerConnect(message) {
+    console.log(`Automarker connected from ${message["multiID"]}.`);
+    publish("peerjs_connected", message["multiID"]);
+    return;
+}
+
+function handleAutomarkerDisconnect(message) {
+    console.log(`Automarker disconnected from ${message["multiID"]}.`);
+    publish("peerjs_disconnected", message["multiID"]);
+    return;
+}
+
+function handleAutomarkerPlayersUpdate(message) {
+    console.log("This is the list of players from automarker. We should populate the dashboard with it.");
+    // kevingoServer.send("automarker_forward", message["message"]);
+    return;
+}
+
+function handleMatchScoreUpdate(message) {
+    publish("match_score", message);
+}
+
+function handleCommentatorNameUpdate(message) {
+    currentBingoGame.commentators = message;
+    publish("commentators", message);
+}
+
+function determinePlayerSplits(enteringPlayerData) {
+    if (!enteringPlayerData) {
+        console.log("determinePlayerSplits called without entering player data.");
+        return;
+    }
+    
+    let otherPlayers = [currentBingoGame.teams[0].displayData.player1, 
+                        currentBingoGame.teams[0].displayData.player2,
+                        currentBingoGame.teams[1].displayData.player1,
+                        currentBingoGame.teams[1].displayData.player2];
+    // I think this works how I want it to, but I might need a check.
+    // otherPlayers = otherPlayers.filter(player => player != enteringPlayerData);
+
+    let splitBuild = [];
+    otherPlayers.forEach(player => {
+        if (player.location == enteringPlayerData.location) {
+            console.log(`Detected ${player.name} in the same location as ${enteringPlayerData.name}.`);
+            splitBuild.push({"player": player.name, "enterTime": player.enterTime});
+            //TODO: let event = new GameEvent("PLAYER_SPLIT", {});
+        } else {
+            console.log(`Detected ${player.name} in different locations as ${enteringPlayerData.name}.`);
+        }
+    });
+    console.log("Split build is: ");
+    console.log(splitBuild);
+    publish("player_split", splitBuild.sort((a, b) => a.enterTime - b.enterTime));
+}
+
+function archiveCurrentGame() {
+    if (currentBingoGame == null || currentBingoGame.hasBeenArchived || currentBingoGame.events.length == 0) {
+        console.log("No current game to archive.");
+        return;
+    }
+    currentBingoGame.hasBeenArchived = true;
+    let timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    let filename = `logs/bingo_game_${timestamp}.json`;
+    fs.writeFile(filename, JSON.stringify(currentBingoGame), (err) => {
+        if (err) {
+            console.error("Error saving game archive:", err);
+            return;
+        }
+        console.log(`Game archived to ${filename}`);
+    });
+
+    let filename2 = `logs/squares_feed_${timestamp}.txt`;
+    let eventsToInclude = [EVENT_TYPES.MARK_SQUARE, EVENT_TYPES.UNMARK_SQUARE, EVENT_TYPES.BINGO_SCORED];
+    fs.writeFile(filename2, currentBingoGame.eventFeedToString(eventsToInclude), (err) => {
+        if (err) {
+            console.error("Error saving game feed archive:", err);
+            return;
+        }
+        console.log(`Game feed archived to ${filename2}`);
+    });
+}
+
+/*
+ * The important part here is that we set the entire board state at once.
+ * This allows the page to be refreshed or opened mid-game and still get the full board state immediately.
+ * So, we never handle individual square updates, we just get the whole board every time and update it.
+ * Individual updates are used to set other data though just in case it's used anywhere else (on screen, for example).
+ */ 
+
+// TODO: Check that boarddata is sent the same way. We might have to handle bingosync and kevingo differently.
+function setBoardData(boardData) {
+    let unclaimedSquareCount = 0;
+    console.log("Board data is...");
+    console.log(boardData);
+    // Reset operations
+    for (let team of currentBingoGame.teams) {
+        team.ownedSquares = [];
+    }
+
+
+    currentBingoGame.board.graffitiList = [];
+    // Parse operations
+    boardJson = JSON.parse(boardData);
+    for (let i = 0; i < boardJson.length; i++) {
+        boardSquare = currentBingoGame.board.getSquareFromIndex(i);
+        // checkOwnershipChange(boardSquare, boardJson[i]);
+        boardSquare.AssignPropsFromData(boardJson[i]);
+        areasDict[boardSquare.level].AssignPropsFromSquare(boardSquare); // this is just metadata
+
+        for (let team of currentBingoGame.teams) {
+            if (team.displayData.inputColor == boardSquare.inputColor) {
+                boardSquare.outputColor = team.displayData.outputColor;
+                team.ownedSquares.push(boardSquare);
+            }
+        }
+        if (boardSquare.inputColor == "blank") {
+            boardSquare.outputColor = null;
+            unclaimedSquareCount += 1;
+        }
+    }
+    currentBingoGame.calculateScoreToWin();
+    currentBingoGame.board.printBoardState(currentBingoGame.teams);
+    publish("game_state_update", currentBingoGame.toJson());
+    if (unclaimedSquareCount == 0) {
+        publish("end_game", {});
+    }
+}
+
+// function checkOwnershipChange(boardSquare, newSquareData) {
+//     // boardSquare.inputColor is previous, newSquareData.colors is new
+//     if (boardSquare.inputColor != newSquareData.colors) {
+//         if (boardSquare.inputColor != "blank") {
+//             let event = new GameEvent(EVENT_TYPES.MARK_SQUARE, "I don't have enough data hereeee")
+//         } else if (newSquareData.colors != "blank") {
+
+//         }
+//     }
+// }
+
+(function pingTimer() {
+    setTimeout(() => {
+        if (subscribers.length > 0) {
+            publish("ping", "Server Ping");
+        }
+        pingTimer();
+    }, 1000);
+})();
+
+class GameEvent {
+    type = EVENT_TYPES.UNKNOWN;
+    data = {};
+    timestamp = 0;
+    player = null;
+    team = null;
+    sectionalArray = [];
+
+    constructor(_type, _data) {
+        this.timestamp = Date.now();
+        this.data = _data;
+        this.type = _type;
+        // console.log("The data is: ", this.data);
+        // console.log(`I am a new ${this.type} event! My data is: ${JSON.stringify(this.data)} important: player is ${this.data.player}`);
+        if (Object.hasOwn(this.data, "player")) {
+            this.player = getPlayerObjFromName(this.data.player);
+            console.log(`Player object is ${JSON.stringify(this.player)}`);
+            this.team = getTeamObjFromPlayerName(this.data.player);
+        }
+        currentBingoGame.addEvent(this);
+    }
+
+    toDisplayText(displayInfoDict) {
+        let teamString = displayInfoDict["teamString"] ?? null; // what the fuck is team string for this? replace with team?
+        let timeFormat = displayInfoDict["timeFormat"] ?? null;
+        let timePrefix = null;
+        if (timeFormat != null) {
+            timePrefix = `${timestampToString(this.timestamp - currentBingoGame.startTime, timeFormat)}`;
+        }
+
+        switch (this.type) {
+            case EVENT_TYPES.START:
+                this.sectionalArray = [timePrefix, "Game started!"];
+                break;
+            case EVENT_TYPES.END:
+                this.sectionalArray = [timePrefix, "Game ended!"];
+                break;
+            case EVENT_TYPES.PAUSE:
+                this.sectionalArray = [timePrefix, "Game paused."];
+                break;
+            case EVENT_TYPES.UNPAUSE:
+                this.sectionalArray = [timePrefix, "Game unpaused."];
+                break;
+            case EVENT_TYPES.MARK_SQUARE:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "marked", this.data.square.text];
+                break;
+            case EVENT_TYPES.UNMARK_SQUARE:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unmarked", this.data.square.text];
+                break;
+            case EVENT_TYPES.CHANGE_LOCATION:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "moved to", getLevelFromID(this.data.levelID)];
+                break;
+            case EVENT_TYPES.COLLECT_TAPE:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "collected tape", this.data.tapeID];
+                break;
+            case EVENT_TYPES.UNLOCK_SOUL:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unlocked soul", getSoulInfoFromNumber(this.data.soulID)];
+                break;
+            case EVENT_TYPES.COLLECT_SOUL:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "collected soul", getSoulInfoFromNumber(this.data.soulID)];
+                break;
+            case EVENT_TYPES.SPRAY_GRAFFITI:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "sprayed graffiti", this.data.graffitiID, "in", getLevelFromID(this.data.levelID)];
+                break;
+            case EVENT_TYPES.COMPLETE_GRAFFITI:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "completed a tag in", getLevelFromID(this.data.levelID), "graffiti"];
+                break;
+            case EVENT_TYPES.COMPLETE_LEVEL_GRAFFITI:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "completed", getLevelFromID(this.data.levelID), "graffiti"];
+                break;
+            case EVENT_TYPES.CHARACTER_UNLOCK:
+                this.sectionalArray = [timePrefix, this.data.player, teamString, "unlocked", getCharacterFromID(this.data.characterID)];
+                break;
+            case EVENT_TYPES.BINGO_SCORED:
+                this.sectionalArray = [timePrefix, getTeamFromID(this.data.teamID), "scored a bingo!"];
+                break;
+            default:
+                return `Unknown event: ${this.data}`;
+        }
+        this.sectionalArray.filter(item => item !== null);
+        return this.sectionalArray.filter(item => item !== null).join(" ");
+    }
+}
+
+class Kevingo {
+    status = null;
+    url = null;
+    chatUrl = null;
+    reader = null;
+
+    constructor(url, wsConn) {
+        this.url = url;
+        this.reader = wsConn;
+    }
+}
+
+class SurgeConnection {
+    status = null;
+    names = [];
+    id = null;
+
+    constructor(id) {
+        this.id = id;
+    }
+}
+
+class Split {
+    sniper = null;
+    sniped = null;
+    // Description?
+    square = null;
+    timeDiff = 0;
+
+
+    constructor(eventSnipedEvent, eventSniperEvent) {
+        this.sniper = eventSniperEvent.data.player;
+        this.sniped = eventSnipedEvent.data.player;
+        this.square = eventSnipedEvent.data.square;
+        this.timeDiff = eventSniperEvent.timestamp - eventSnipedEvent.timestamp;
+    }
+}
+
+class Board {
+    board = null;
+    graffitiList = [];
+
+    constructor() {
+        this.board = [[0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0],
+                      [0,0,0,0,0]];
+
+        for (var row = 0; row < 5; row++) {
+            for (var col = 0; col < 5; col++) {
+                this.board[row][col] = new Square(row, col);
+                if (this.board[row][col].isGraffiti) {
+                    this.graffitiList.push(this.board[row][col].name);
+                }
+            }
+        }
+    }
+
+    getSquare(row, col) {
+        return this.board[row][col];
+    }
+
+    getSquareFromIndex(index) {
+        const { row, col } = {"row": Math.floor(index / 5), "col": index % 5};
+        return this.getSquare(row, col);
+    }
+
+    printBoardState(teams) {
+        let boardState = "";
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const square = this.board[row][col];
+                const owner = square.getOwner(teams);
+                boardState += `[${square.text} | ${owner ? owner.displayData.name : "None"}] `;
+            }
+            boardState += "\n";
+        }
+        console.log(boardState);
+    }
+
+    getJSON() {
+        return JSON.stringify(this);
+    }
+}
+
+class BingoGame {
+    bingoCount = 0;
+    scoreToWin = 99; // Placeholder
+    inProgress = false;
+    events = [];
+    chatLog = [];
+    teams = [];
+    board = null;
+    startTime = 0;
+    hasBeenArchived = false;
+    commentators = {};
+    // regions = [];
+
+    constructor() {
+        this.bingoCount = 0;
+        this.inProgress = false;
+        this.events = [];
+        this.gameFeed = []; // This will get changed to some default objects.
+        this.chatLog = [];
+        this.teams = [leftTeamData, rightTeamData];
+        this.board = new Board();
+        this.regions = [];
+        console.log("Created new game, waiting for data...");
+    }
+
+    startGame(startTime) {
+        this.inProgress = true;
+        this.startTime = startTime;
+        let event = new GameEvent(EVENT_TYPES.START, {});
+        publish("game_start", {"startTime": this.startTime});
+    }
+
+    endGame() {
+        this.inProgress = false;
+        let event = new GameEvent(EVENT_TYPES.END, {});
+        publish("game_end", {"endTime": Date.now()});
+    }
+
+    eventFeedToString(outputEventsList) {
+        let feedString = "";
+        this.events.filter(event => outputEventsList.includes(event.type)).forEach(event => {
+            feedString += `${event.toDisplayText({"timeFormat": "[%m:%s.%i]"})}\n`;
+        });
+        return feedString;
+    }
+
+    calculateScoreToWin() {
+        let stw = 0;
+        for (let i = 0; i < 25; i++) {
+            stw += this.board.getSquareFromIndex(i).value;
+        }
+        this.scoreToWin = Math.round(stw / 2.0) + Team.allTeamsBingoCount;
+    }
+
+    getGameTime() {
+        if (!this.inProgress) {
+            return 0;
+        }
+
+        return Date.now() - this.startTime;
+    }
+
+    addEvent(event) {
+        console.log(`Adding event ${event.type} to the feed!`);
+        this.events.push(event);
+    }
+
+    toJson() {
+        return JSON.stringify(this);
+    }
+}
+
+// class GameFeed {
+//     lineCount = 0;
+//     lines = [];
+
+//     createLinesFromEvents(events) {
+//         return;
+//     }
+// }
+
+class Team {
+    static allTeamsBingoCount = 0;
+    id = "";
+    // Display Data
+    displayData = {
+        name: "",
+        players: [],
+        inputColor: "",
+        outputColor: "",
+        outputForeColor: ""
+    }
+
+    tapeData = [];
+    ownedSquares = [];
+    score = 0;
+    maxScore = 0;
+    bingoCount = 0;
+    graffitiProgress = {};
+    
+
+    constructor(id) {
+        this.id = id;
+        // todo, set all the stuff.
+        // for each player in playerData (player#)
+        // this.players.push(new Player(_teamData[playerData]));
+
+        // TODO: Uncomment and check this. It's late.
+        allAreas.forEach(area => 
+        {
+            this.graffitiProgress[area] = new LevelProgress(area);
+        });
+    }
+
+    resetData() {
+        this.tapeData = [];
+        this.ownedSquares = [];
+        this.score = 0;
+        this.maxScore = 0;
+        this.bingocount = 0;
+        allAreas.forEach(area => 
+        {
+            this.graffitiProgress[area] = new LevelProgress(area);
+        });
+    }
+
+    countScore(board) {
+        let squareScore = 0;
+        for (let square of this.ownedSquares) {
+            squareScore += square.value;
+        }
+        this.countBingos(board);
+        this.score = squareScore + (this.bingocount * BINGOPOINTS);
+    }
+
+    countBingos(board) {
+        let prevBingoCount = this.bingocount; // Used for checking if a new bingo has been scored.
+        this.bingocount = 0;
+        for (var rc = 0; rc < 5; rc++) {
+            if (board[rc][0].inputColor == this.displayData.inputColor && 
+                board[rc][1].inputColor == this.displayData.inputColor && 
+                board[rc][2].inputColor == this.displayData.inputColor && 
+                board[rc][3].inputColor == this.displayData.inputColor && 
+                board[rc][4].inputColor == this.displayData.inputColor) {
+                this.bingocount += 1;
+                Team.allTeamsBingoCount += 1;
+            }
+
+            if (board[0][rc].inputColor == this.displayData.inputColor && 
+                board[1][rc].inputColor == this.displayData.inputColor && 
+                board[2][rc].inputColor == this.displayData.inputColor && 
+                board[3][rc].inputColor == this.displayData.inputColor && 
+                board[4][rc].inputColor == this.displayData.inputColor) {
+                this.bingocount += 1;
+                Team.allTeamsBingoCount += 1;
+            }
+        }
+
+        if (board[0][0].inputColor == this.displayData.inputColor && 
+            board[1][1].inputColor == this.displayData.inputColor && 
+            board[2][2].inputColor == this.displayData.inputColor && 
+            board[3][3].inputColor == this.displayData.inputColor && 
+            board[4][4].inputColor == this.displayData.inputColor) {
+            this.bingocount += 1;
+            Team.allTeamsBingoCount += 1;
+        }
+
+        if (board[0][4].inputColor == this.displayData.inputColor && 
+            board[1][3].inputColor == this.displayData.inputColor && 
+            board[2][2].inputColor == this.displayData.inputColor && 
+            board[3][1].inputColor == this.displayData.inputColor && 
+            board[4][0].inputColor == this.displayData.inputColor) {
+            this.bingocount += 1;
+            Team.allTeamsBingoCount += 1;
+        }
+        if (this.bingocount > prevBingoCount) {
+            if (this.name == leftTeamData.name) {
+                //displayBingo("left");
+                console.log(`New bingo for ${this.name}!`);
+            }
+        }
+    }
+
+    static getTeamFromID(id) {
+        if (leftTeamData.id == id) {
+            return leftTeamData;
+        } else if (rightTeamData.id == id) {
+            return rightTeamData;
+        }
+        return null;
+    }
+
+    toJson() {
+        return JSON.stringify(this);
+    }
+}
+
+class Player {
+    streamLocation = null;
+    location = null;
+    enterTime = 0;
+    currentSplit = null;
+    name = "";
+    pronouns = "";
+    feed = [];
+    // we might need board location stuff so we can send it.
+
+    constructor(_playerData) {
+        {};
+    }
+}
+
+function getPlayerObjFromName(playerName) {
+    if (leftTeamData) {
+        if (leftTeamData.displayData.player1.name == playerName) {
+            return leftTeamData.displayData.player1;
+        } else if (leftTeamData.displayData.player2.name == playerName) {
+            return leftTeamData.displayData.player2;
+        }
+    }
+    if (rightTeamData) {
+        if (rightTeamData.displayData.player1.name == playerName) {
+            return rightTeamData.displayData.player1;
+        } else if (rightTeamData.displayData.player2.name == playerName) {
+            return rightTeamData.displayData.player2;
+        }
+    }
+    console.warn(`Could not find player ${playerName} on a team!.`);
+    return null;
+}
+
+function getTeamObjFromPlayerName(playerName) {
+    if (leftTeamData) {
+        if (leftTeamData.displayData.player1.name == playerName || leftTeamData.displayData.player2.name == playerName) {
+            return leftTeamData;
+        }
+    }
+    if (rightTeamData) {
+        if (rightTeamData.displayData.player1.name == playerName || rightTeamData.displayData.player2.name == playerName) {
+            return rightTeamData;
+        }
+    }
+    console.warn(`Could not find team for player ${playerName}!.`);
+    return null;
+}
+
+function getTeamFromID(id) {
+    if (leftTeamData.id == id) {
+        return leftTeamData;
+    } else if (rightTeamData.id == id) {
+        return rightTeamData;
+    }
+    return null;
+}
+
+class Square {
+    id = "";
+    level = null;
+    region = null;
+    text = "";
+    isGraffiti = false;
+    value = 0;
+    inputColor = null;
+    outputColor = null;
+    isDefault = true;
+    row = -1;
+    col = -1;
+
+    constructor(row, col) {
+        this.row = row;
+        this.col = col;
+        this.id = `${row},${col}`;
+    }
+
+    getOwner(teams) {
+        return teams.find(team => team.ownedSquares.includes(this));
+    }
+
+    AssignPropsFromData(squareData) {
+        var squareText = squareData.name;
+        Object.values(LEVELS).forEach(level => {
+            if (squareText.toLowerCase().startsWith(level.toLowerCase())) {
+                this.level = level;
+            }
+        });
+        this.region = getAreaFromLevel(this.level);
+
+        if (squareText.includes("100%")) {
+            this.value = GRAFFITIPOINTS;
+            this.isGraffiti = true;
+            currentBingoGame.board.graffitiList.push(this.level);
+        } else {
+            this.value = SQUAREPOINTS;
+            this.isGraffiti = false;
+        }
+
+        this.text = squareText;
+        this.inputColor = squareData.colors;
+        // this.SetDisplayText(squareText);
+
+        this.isDefault = true;
+        let checkArray = ["Grind x", "Air x", "Tricks x", "Points x", "Special", "100%", "Boogie", "Cube", "Rhyth", "Soda", "Jazz"];
+        checkArray.forEach(keyword => {
+            if (this.text.includes(keyword)) {
+                this.isDefault = false;
+            }
+        });
+
+        // TODO: Are we setting team/color data here? That might be bad if we're not.
+    }
+}
+
+class LevelMetadata {
+    name = "";
+
+    hasGraffiti = false;
+    squares = [];
+    players = [];
+    value = 0;
+
+    constructor(name) {
+        this.name = name;
+    }
+
+    AssignPropsFromSquare(squareObj) {
+        this.squares.push(squareObj);
+        if (squareObj.isGraffiti) {
+            this.hasGraffiti = true;
+            this.value += GRAFFITIPOINTS;
+        } else {
+            this.value += SQUAREPOINTS;
+        }
+    }
+}
+
+class LevelProgress {
+    graffiti = [];
+    incompleteGraffiti = [];
+    completeGraffiti = [];
+    name = "";
+    // id = 0;
+    tape = false;
+    maxGraffiti = 0;
+
+    constructor (name) {
+        this.name = name;
+        getTagsForLevel(name).forEach(graffitiInfo => {
+            this.incompleteGraffiti.push(new Graffiti(graffitiInfo));
+        });
+
+        this.maxGraffiti = this.incompleteGraffiti.length;
+    }
+
+    CountGraffiti() {
+        return this.completeGraffiti.length;
+    }
+
+    GetGraffitiByID(graffitiID) {
+        let returnObj = null;
+        this.incompleteGraffiti.forEach(graffitiObj => {
+            if (graffitiObj.id == graffitiID) {
+                returnObj = graffitiObj;
+            }
+        });
+        this.completeGraffiti.forEach(graffitiObj => {
+            if (graffitiObj.id == graffitiID) {
+                returnObj = graffitiObj;
+            }
+        });
+        return returnObj;
+    }
+
+    MarkGraffitiAsComplete(graffitiObj) {
+        let targetIndex = this.incompleteGraffiti.indexOf(graffitiObj)
+        this.completeGraffiti.push(this.incompleteGraffiti.splice(targetIndex, 1));
+        if (this.incompleteGraffiti.length == 0) {
+            return true;
+        } 
+        return false;
+    }
+
+    OutputGraffitiInfo() {
+        return {"name": this.name, "complete": this.CountGraffiti(), "maximum": this.maxGraffiti, "incompleteList": this.incompleteGraffiti};
+    }
+
+    OutputAbbreviatedGraffitiInfo() {
+        return {"name": this.name, "complete": this.CountGraffiti(), "maximum": this.maxGraffiti};
+    }
+}
+
+class Region {
+    name = "";
+    squares = [];
+    value = 0;
+}
+
+class Graffiti { 
+    constructor(infoArray) {
+        this.id = infoArray[0];
+        this.size = infoArray[1];
+        this.location = infoArray[2];
+        this.completeTags = [];
+        switch (this.size) {
+            case "S":
+                this.incompleteTags = [-8];
+                break;
+            case "SS":
+                this.incompleteTags = [-8];
+                break;
+            case "M":
+                this.incompleteTags = [-8, -57, -449];
+                break;
+            case "L":
+                this.incompleteTags = [-8, -57, -449, -3585, -28673, -229377];
+                break;
+            case "XL":
+                this.incompleteTags = [-8, -57, -449, -3585, -28673, -229377, -1835009, -14680065, -117440513, -939524097]; // * 1.1
+                break;
+            default:
+                this.incompleteTags = [];
+                break;
+            
+        }
+    }
+
+    MarkTagAsComplete(tagID) {
+        if (this.completeTags.includes(tagID)) {
+        } else {
+            this.completeTags.push(this.incompleteTags.splice(this.incompleteTags.indexOf(tagID), 1));
+            if (this.incompleteTags.length == 0) {
+                console.log(`[${getNow()}] ${this.location} graffiti is complete!`);
+                return {"description": this.location, "graffitiID": this.id};
+            }
+        }
+        return null;
+    }
+}
+
+// Util functions
+{
+
+function removeKey(obj, keyToRemove) {
+    console.log("obj is ")
+    console.log(obj);
+    const { [keyToRemove]: _, ...rest } = obj;
+    return rest;
+};
+
+function timestampToString(timestampMS, dateFormat = "[%m:%s.%i]") {
+    // We're going to use a basic implementation where:
+    // %m is minutes, %s is seconds, %i is milliseconds.
+
+    let minutes = Math.floor(timestampMS / 60000);
+    let seconds = Math.floor((timestampMS % 60000) / 1000);
+    let milliseconds = timestampMS % 1000;
+
+    minutes = String(minutes).padStart(2, '0');
+    seconds = String(seconds).padStart(2, '0');
+    milliseconds = String(milliseconds).padStart(3, '0');
+
+    let dateString = dateFormat.replace("%m", minutes).replace("%s", seconds).replace("%i", milliseconds);
+    return dateString;
+}
+
+function getMultiIDOnly(multiLink) {
+    return multiLink.includes("connect=") ? multiLink.split("connect=")[1] : multiLink;
+}
+
+
+function Commafy(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function dwsToString(dw1, dw2, dw3) {
+    function dwToBytes(dw) {
+        return [dw & 0xFF, (dw >> 8) & 0xFF, (dw >> 16) & 0xFF, (dw >> 24) & 0xFF];
+    }
+    let allBytes = [...dwToBytes(dw1), ...dwToBytes(dw2), ...dwToBytes(dw3)];
+    return String.fromCharCode(...allBytes.filter(b => b !== 0));
+}
+
+function formatMilliseconds(ms) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const milliseconds = ms % 1000;
+
+  return (
+    String(minutes).padStart(2, '0') + ":" +
+    String(seconds).padStart(2, '0') + "." +
+    String(milliseconds).padStart(3, '0')
+  );
+}
+
+function getNow() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const iii = String(now.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${iii}`;
+}
+
+function formatNow(unixTime) {
+    const now = new Date(unixTime);
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const iii = String(now.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${iii}`;
+}
+
+function getAreaFromLevel(level) {
+    if (shibuyaAreas.includes(level)) {
+        return "shibuya";
+    }
+    if (koganeAreas.includes(level)) {
+        return "kogane";
+    }
+    if (bentenAreas.includes(level)) {
+        return "benten";
+    }
+}
+
+}
+
+// Game Data
+{
+
+function getLevelFromID(levelInt) {
+    switch (levelInt) {
+        case 0:
+            return LEVELS.GARAGE;
+        case 65536:
+            return LEVELS.SHIBUYA;
+        case 65537:
+            return LEVELS.CHUO;
+        case 65538:
+            return LEVELS.DOGEN;
+        case 65539:
+            return LEVELS.HIKAGE;
+        case 131072:
+            return LEVELS.RDH;
+        case 131073:
+            return LEVELS.SEWERS;
+        case 131074:
+            return LEVELS.KIBO;
+        case 131075:
+            return LEVELS.BOTTOMPOINT;
+        case 131076:
+            return LEVELS.FRZ;
+        case 196608:
+            return LEVELS.x99TH;
+        case 196609:
+            return LEVELS.SKYDINO;
+        case 196610:
+            return LEVELS.STADIUM;
+        case 196611:
+            return LEVELS.HWY0;
+        case 196612:
+            return LEVELS.SKYSCRAPER;
+        default:
+            return "Other/Unknown";
+    }
+}
+
+function getTapeFromID(tapeID) {
+    switch (tapeID) {
+        case 0:
+            return LEVELS.SHIBUYA;
+        case 1:
+            return LEVELS.CHUO;
+        case 2:
+            return LEVELS.DOGEN;
+        case 3:
+            return LEVELS.HIKAGE;
+        case 4:
+            return LEVELS.RDH;
+        case 5:
+            return LEVELS.SEWERS;
+        case 6:
+            return LEVELS.KIBO;
+        case 7:
+            return LEVELS.BOTTOMPOINT;	
+        case 8:
+            return LEVELS.FRZ;
+        case 9:
+            return LEVELS.x99TH;
+        case 10:
+            return LEVELS.SKYDINO;
+        case 11:
+            return LEVELS.HWY0;
+        case 12:
+            return LEVELS.SKYSCRAPER;
+        default:
+            return "Unknown/Error";
+    }
+}
+
+function getCharacterFromID(charID) {
+    switch (charID) {
+        case 10:
+            return "Cube";
+        case 4:
+            return "Rhyth";
+        case 21:
+            return "Jazz";
+        case 5:
+            return "Soda";
+        case 9:
+            return "Boogie";
+        default:
+            return "Unknown/Error";
+    }
+}
+
+function getSoulInfoFromNumber(soulNum) {
+    switch (soulNum) {
+        case 5:
+            return {"area": LEVELS.DOGEN, "name": "Isolated platform down hill", "type": "default"};
+        case 6:
+            return {"area": LEVELS.DOGEN, "name": "Tricks x 20", "type": "tape"};
+        case 7:
+            return {"area": LEVELS.SHIBUYA, "name": "On top of bus", "type": "default"};
+        case 8:
+            return {"area": LEVELS.SHIBUYA, "name": "Special (13 platforms)", "type": "tape"};
+        case 9:
+            return {"area": LEVELS.CHUO, "name": "Air x 4", "type": "tape"};
+        case 10:
+            return {"area": LEVELS.RDH, "name": "Top of station", "type": "default"};
+        case 11:
+            return {"area": LEVELS.RDH, "name": "Points x 40k", "type": "tape"};
+        case 12:
+            return {"area": LEVELS.x99TH, "name": "Grind x 15", "type": "tape"};
+        case 13:
+            return {"area": LEVELS.SEWERS, "name": "Entrance", "type": "default"};
+        case 15:
+            return {"area": LEVELS.SEWERS, "name": "Tricks x 45", "type": "tape"};
+        case 16:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Catwalk, PJ Room 3", "type": "default"};
+        case 17:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Special (Points x 70k)", "type": "tape"};
+        case 18:
+            return {"area": LEVELS.HIKAGE, "name": "Air x 4", "type": "tape"};
+        case 19:
+            return {"area": LEVELS.KIBO, "name": "Under tower", "type": "default"};
+        case 21:
+            return {"area": LEVELS.KIBO, "name": "Points x 250k", "type": "tape"};
+        case 22:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Grind x 20", "type": "tape"};
+        case 23:
+            return {"area": LEVELS.HWY0, "name": "Directly under entrance", "type": "default"};
+        case 24:
+            return {"area": LEVELS.HWY0, "name": "Tricks x 70", "type": "tape"};
+        case 26:
+            return {"area": LEVELS.SKYDINO, "name": "On top of T-rex", "type": "default"};
+        case 27:
+            return {"area": LEVELS.SKYDINO, "name": "Points x 10k", "type": "tape"};
+        case 28:
+            return {"area": LEVELS.FRZ, "name": "Grind x 10", "type": "tape"};
+
+        case 34:
+            return {"area": LEVELS.DOGEN, "name": "Right of Street", "type": "default"};
+        case 35:
+            return {"area": LEVELS.DOGEN, "name": "Points x 50k", "type": "tape"};
+        case 36:
+            return {"area": LEVELS.SHIBUYA, "name": "Grind x 10", "type": "tape"};
+        case 37:
+            return {"area": LEVELS.CHUO, "name": "Right Canal", "type": "default"};
+        case 38:
+            return {"area": LEVELS.CHUO, "name": "Tricks x 30", "type": "tape"};
+        case 39:
+            return {"area": LEVELS.RDH, "name": "Lookout (Cops 2)", "type": "default"};
+        case 40:
+            return {"area": LEVELS.RDH, "name": "Special (Grind Lower Chimney)", "type": "tape"};
+        case 41:
+            return {"area": LEVELS.x99TH, "name": "Air x 4", "type": "tape"};
+        case 42:
+            return {"area": LEVELS.SEWERS, "name": "Center structure", "type": "default"};
+        case 43:
+            return {"area": LEVELS.SEWERS, "name": "Points x 100k", "type": "tape"};
+        case 44:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Grind x 10", "type": "tape"};
+        case 45:
+            return {"area": LEVELS.HIKAGE, "name": "Cubby", "type": "default"};
+        case 46:
+            return {"area": LEVELS.HIKAGE, "name": "Tricks x 55", "type": "tape"};
+        case 47:
+            return {"area": LEVELS.KIBO, "name": "Under wires (huh)", "type": "default"};
+        case 49:
+            return {"area": LEVELS.KIBO, "name": "Special (Walk under gate at top)", "type": "tape"};
+        case 50:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Air x 4", "type": "tape"};
+        case 51:
+            return {"area": LEVELS.HWY0, "name": "Left alley near phone booth", "type": "default"};
+        case 52:
+            return {"area": LEVELS.HWY0, "name": "Points x 90k", "type": "tape"};
+        case 54:
+            return {"area": LEVELS.SKYDINO, "name": "Under Brontosaurus", "type": "default"};
+        case 55:
+            return {"area": LEVELS.SKYDINO, "name": "Special (Rail, Swing, Rail)", "type": "tape"};
+        case 56:
+            return {"area": LEVELS.FRZ, "name": "Air x 8", "type": "tape"};
+
+        case 61:
+            return {"area": LEVELS.DOGEN, "name": "Past Statue", "type": "default"};
+        case 62:
+            return {"area": LEVELS.DOGEN, "name": "Special (Grind Avenue)", "type": "tape"};
+        case 63:
+            return {"area": LEVELS.SHIBUYA, "name": "Air x 3", "type": "tape"};
+        case 64:
+            return {"area": LEVELS.CHUO, "name": "Cubby", "type": "default"};
+        case 65:
+            return {"area": LEVELS.CHUO, "name": "Points x 60k", "type": "tape"};
+        case 67:
+            return {"area": LEVELS.RDH, "name": "Grind x 10", "type": "tape"};
+        case 68:
+            return {"area": LEVELS.x99TH, "name": "Center of Dark", "type": "default"};
+        case 69:
+            return {"area": LEVELS.x99TH, "name": "Tricks x 40", "type": "tape"};
+        case 70:
+            return {"area": LEVELS.SEWERS, "name": "Rail, Floor 1 to 2", "type": "default"};
+        case 71:
+            return {"area": LEVELS.SEWERS, "name": "Special (Points x 150k)", "type": "tape"};
+        case 72:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Air x 4", "type": "tape"};
+        case 73:
+            return {"area": LEVELS.HIKAGE, "name": "Crane", "type": "default"};
+        case 74:
+            return {"area": LEVELS.HIKAGE, "name": "Points x 300k", "type": "tape"};
+        case 76:
+            return {"area": LEVELS.KIBO, "name": "Grind x 20", "type": "tape"};
+        case 77:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Top of Observatory", "type": "default"};
+        case 79:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Tricks x 60", "type": "tape"};
+        case 80:
+            return {"area": LEVELS.HWY0, "name": "Trash Pit", "type": "default"};
+        case 81:
+            return {"area": LEVELS.HWY0, "name": "Special (Wallride Alley)", "type": "tape"};
+        case 82:
+            return {"area": LEVELS.SKYDINO, "name": "Grind x 50", "type": "tape"};
+        case 83:
+            return {"area": LEVELS.FRZ, "name": "'Clip' soul, lower area", "type": "default"};
+        case 84:
+            return {"area": LEVELS.FRZ, "name": "Tricks x 100", "type": "tape"};
+
+        case 92:
+            return {"area": LEVELS.DOGEN, "name": "Grind x 10", "type": "tape"};
+        case 93:
+            return {"area": LEVELS.SHIBUYA, "name": "Cubby", "type": "default"};
+        case 94:
+            return {"area": LEVELS.SHIBUYA, "name": "Tricks x 25", "type": "tape"};
+        case 95:
+            return {"area": LEVELS.CHUO, "name": "South of Hayashi", "type": "default"};
+        case 96:
+            return {"area": LEVELS.CHUO, "name": "Special (G/W to end)", "type": "tape"};
+        case 97:
+            return {"area": LEVELS.RDH, "name": "Air x 4", "type": "tape"};
+        case 98:
+            return {"area": LEVELS.x99TH, "name": "Light Wallride", "type": "default"};
+        case 99:
+            return {"area": LEVELS.x99TH, "name": "Points x 100k", "type": "tape"};
+        case 100:
+            return {"area": LEVELS.SEWERS, "name": "Grind x 10", "type": "tape"};
+        case 101:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Tunnel before Cube", "type": "default"};
+        case 102:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Tricks x 50", "type": "tape"};
+        case 103:
+            return {"area": LEVELS.HIKAGE, "name": "Center, floating", "type": "default"};
+        case 104:
+            return {"area": LEVELS.HIKAGE, "name": "Special (Crane, Top, Bottom)", "type": "tape"};
+        case 105:
+            return {"area": LEVELS.KIBO, "name": "Air x 4", "type": "tape"};
+        case 106:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Floating, Pink halfpipes", "type": "default"};
+        case 107:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Points x 110k", "type": "tape"};
+        case 108:
+            return {"area": LEVELS.HWY0, "name": "Grind x 15", "type": "tape"};
+        case 109:
+            return {"area": LEVELS.SKYDINO, "name": "Platform near starting spiral", "type": "default"};
+        case 110:
+            return {"area": LEVELS.SKYDINO, "name": "Air x 6", "type": "tape"};
+        case 111:
+            return {"area": LEVELS.FRZ, "name": "Down tube", "type": "default"};
+        case 112:
+            return {"area": LEVELS.FRZ, "name": "Points x 50k", "type": "tape"};
+
+        case 117:
+            return {"area": LEVELS.DOGEN, "name": "Air x 3", "type": "tape"};
+        case 119:
+            return {"area": LEVELS.SHIBUYA, "name": "Platform", "type": "default"};
+        case 121:
+            return {"area": LEVELS.SHIBUYA, "name": "Points x 100k", "type": "tape"};
+        case 122:
+            return {"area": LEVELS.CHUO, "name": "Grind x 10", "type": "tape"};
+        case 123:
+            return {"area": LEVELS.RDH, "name": "Sauna", "type": "default"};
+        case 124:
+            return {"area": LEVELS.RDH, "name": "Tricks x 35", "type": "tape"};
+        case 126:
+            return {"area": LEVELS.x99TH, "name": "Wallride to dark", "type": "default"};
+        case 127:
+            return {"area": LEVELS.x99TH, "name": "Special (Perimeter of Tower)", "type": "tape"};
+        case 128:
+            return {"area": LEVELS.SEWERS, "name": "Air x 4", "type": "tape"};
+        case 129:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Right halfpipe after winding rails", "type": "default"};
+        case 130:
+            return {"area": LEVELS.BOTTOMPOINT, "name": "Points x 50k", "type": "tape"};
+        case 131:
+            return {"area": LEVELS.HIKAGE, "name": "Grind x 20", "type": "tape"};
+        case 132:
+            return {"area": LEVELS.KIBO, "name": "Upper platform at end", "type": "default"};
+        case 133:
+            return {"area": LEVELS.KIBO, "name": "Tricks x 60", "type": "tape"};
+        case 134:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Entrance Pillar", "type": "default"};
+        case 135:
+            return {"area": LEVELS.SKYSCRAPER, "name": "Special (Circle the Pharaoh)", "type": "tape"};
+        case 136:
+            return {"area": LEVELS.HWY0, "name": "Air x 5", "type": "tape"};
+        case 137:
+            return {"area": LEVELS.SKYDINO, "name": "Building under swings", "type": "default"};
+        case 138:
+            return {"area": LEVELS.SKYDINO, "name": "Tricks x 100", "type": "tape"};
+        case 139:
+            return {"area": LEVELS.FRZ, "name": "End of first Maze", "type": "default"};
+        case 140:
+            return {"area": LEVELS.FRZ, "name": "Special (Grind up the metal)", "type": "tape"};
+
+        default:
+            return "Other/Unknown";
+    }
+}
+
+// Accepts ID or name!
+function getTagsForLevel(levelID) {
+    switch (levelID) {
+        case 65538:
+        case LEVELS.DOGEN:
+            return [[67, "S", "upper area"], 
+                    [68, "SS", "upper area"],
+                    [69, "M", "upper area"],
+                    [64, "SS", "upper area"],
+                    [70, "L", "upper area"],
+                    [65, "S", "upper area"],
+                    [66, "SS", "upper area"],
+                    [32, "M", "tricks"],
+                    [33, "S", "tricks"],
+                    [11, "L", "first any%"],
+                    [4, "L", "first any%"],
+                    [34, "M", "M on rail"],
+                    [21, "SS", "hill curve 1"],
+                    [20, "M", "hill curve 1"],
+                    [22, "S", "hill curve 1"],
+                    [23, "SS", "hill curve 1"],
+                    [24, "M", "hill curve 1"],
+                    [37, "L", "points"],
+                    [26, "SS", "hill curve 2"],
+                    [27, "S", "hill curve 2"],
+                    [25, "XL", "hill curve 2"],
+                    [28, "S", "hill curve 2"],
+                    [29, "SS", "hill curve 2"],
+                    [7, "M", "hill curve 2"],
+                    [44, "L", "building"],
+                    [45, "M", "isolated platform"],
+                    [62, "L", "slope"],
+                    [12, "L", "rail"],
+                    [60, "L", "pre-slope"],
+                    [10, "M", "last any%"],
+                    [9, "L", "last any%"],
+                    [47, "M", "Corner"],
+                    [71, "L", "rail up to market"],
+                    [51, "M", "top market"],
+                    [52, "M", "mid market"],
+                    [59, "M", "floor market"],
+                    [58, "SS", "floating 3"],
+                    [57, "SS", "floating 2"],
+                    [56, "SS", "floating 1"],
+                    [53, "SS", "exit"],
+                    [54, "SS", "exit"],
+                    [55, "SS", "exit"]];
+        case 65536:
+        case LEVELS.SHIBUYA:
+            return [[69, "XL", "Near Entrance"],
+                    [67, "M", "Next to Cubby"],
+                    [14, "M", "Next to Grind"],
+                    [15, "M", "Behind Pickle"],
+                    [16, "M", "Left of Pickle"],
+                    [40, "M", "Bus near Cubby"],
+                    [39, "M", "Bus near Cubby"],
+                    [21, "S", "Bus near Hikage"],
+                    [22, "S", "Bus near Hikage"],
+                    [23, "S", "Bus near Hikage"],
+                    [24, "S", "Bus near Hikage"],
+                    [25, "S", "Bus near Hikage"],
+                    [26, "S", "Bus near Hikage"],
+                    [36, "M", "Bus near Hikage"],
+                    [37, "M", "Bus near Hikage"],
+                    [72, "M", "Elevated Near Chuo"],
+                    [58, "XL", "Bus Platform"],
+                    [51, "S", "Wallride"],
+                    [52, "S", "Wallride"],
+                    [53, "S", "Wallride"],
+                    [45, "SS", "On Ramp"],
+                    [46, "S", "On Ramp"],
+                    [47, "SS", "On Ramp"],
+                    [63, "L", "Near Tricks"],
+                    [7, "SS", "Curving rail"],
+                    [8, "SS", "Curving rail"],
+                    [9, "SS", "Curving rail"],
+                    [10, "SS", "Curving rail"],
+                    [11, "SS", "Curving rail"],
+                    [13, "S", "Along combo challenge"],
+                    [38, "L", "Near Air"],
+                    [6, "S", "Combo challenge pillar"],
+                    [41, "L", "Near Air"],
+                    [5, "S", "Combo challenge pillar"],
+                    [4, "S", "Pillar near Air"],
+                    [3, "S", "Pillar near Air"],
+                    [12, "M", "Ground near Chuo"],
+                    [27, "SS", "Bus near Combo"],
+                    [28, "SS", "Bus near Combo"],
+                    [29, "S", "Bus near Combo"],
+                    [30, "SS", "Bus near Combo"],
+                    [31, "SS", "Bus near Combo"],
+                    [32, "S", "Bus near Combo"],
+                    [33, "SS", "Bus near Combo"],
+                    [34, "S", "Bus near Combo"],
+                    [35, "S", "Bus near Combo"],
+                    [71, "L", "Tape platform"],
+                    [42, "XL", "Tape platform"]]
+        case 65537:
+        case LEVELS.CHUO:
+            return [[36, "XL", "Between buildings"],
+                    [57, "S", "Dropdown after terminal warp"],
+                    [39, "SS", "Stairs to Hayashi Platform"],
+                    [17, "L", "Hayashi Platform"],
+                    [42, "S", "Billboard from Hayashi Platform"],
+                    [18, "M", "Right Street 1"],
+                    [20, "S", "Right Street 2"],
+                    [19, "SS", "Right Street 3"],
+                    [21, "M", "Right Street 4"],
+                    [43, "SS", "Billboard on street 1"],
+                    [44, "S", "Billboard on street 2"],
+                    [45, "SS", "Billboard on street 3"],
+                    [22, "M", "Right Street 5"],
+                    [23, "L", "Right Street 6"],
+                    [71, "L", "Right Street 7"],
+                    [15, "XL", "Right of Street 8"],
+                    [64, "L", "Right Canal"],
+                    [27, "L", "Middle Canal"],
+                    [28, "M", "Middle Canal 2"],
+                    [59, "SS", "Billboards after Cubby"],
+                    [47, "S", "Billboard after Cubby 2"],
+                    [3, "SS", "Boost Markets 1"],
+                    [4, "SS", "Boost Markets 2"],
+                    [5, "SS", "Boost Markets 3"],
+                    [6, "SS", "Boost Markets 4"],
+                    [7, "SS", "Boost Markets 5"],
+                    [48, "M", "Special Grind 1"],
+                    [49, "SS", "Special Grind 2"],
+                    [50, "SS", "Special Grind 3"],
+                    [51, "SS", "Special Grind 4"],
+                    [60, "SS", "Alleyway 1st Jump 1"],
+                    [53, "S", "Alleyway 1st Jump 2"],
+                    [61, "SS", "Alleyway 2nd Jump 1"],
+                    [52, "S", "Alleyway 2nd Jump 2"],
+                    [14, "L", "Alleyway Middle"],
+                    [54, "S", "Alleyway Billboard"],
+                    [62, "SS", "Alleyway Billboard Jump"],
+                    [9, "L", "End of Alleyway"],
+                    [24, "XL", "XL under Octopuss"],
+                    [30, "S", "South of Chameleon"],
+                    [25, "M", "South East of Chameleon"],
+                    [26, "L", "East of Chameleon"],
+                    [16, "M", "East of Chameleon 2"],
+                    [10, "M", "Right Ramp 1"],
+                    [12, "S", "Right Ramp 2"],
+                    [11, "S", "Right Ramp 3"],
+                    [13, "XL", "Right Ramp 4"],
+                    [31, "S", "Left Ramp 1"],
+                    [32, "SS", "Left Ramp 2"],
+                    [8, "L", "Left Ramp 3"]];
+        case 65539:
+        case LEVELS.HIKAGE:
+            return [[53, "XL", "Right Ramp 1st"],
+                    [41, "L", "Right Ramp 2nd"],
+                    [42, "M", "Before Right Alley"],
+                    [55, "L", "Right Alley 1"],
+                    [43, "SS", "Right Alley 2"],
+                    [54, "XL", "Right Alley 3"],
+                    [31, "M", "Right Alley 4"],
+                    [37, "M", "West of Crane 1"],
+                    [14, "S", "West of Crane 2"],
+                    [20, "S", "North of Crane"],
+                    [16, "S", "South East of Crane 1"],
+                    [18, "S", "South East of Crane 2"],
+                    [19, "M", "Before final stairs"],
+                    [15, "SS", "After stairs"],
+                    [36, "S", "After stairs billboard"],
+                    [32, "L", "Large top of entrance"],
+                    [38, "L", "Large top of entrance 2"],
+                    [12, "M", "Construction room 2"],
+                    [11, "S", "Contruction room 1"],
+                    [13, "SS", "Outside Construction room"],
+                    [17, "L", "Top corner isolated"],
+                    [30, "M", "any% Terrordrone defeat spawnpoint"],
+                    [21, "M", "4th level spray 3"],
+                    [22, "SS", "4th level spray 2"],
+                    [35, "XL", "4th level spray 1"],
+                    [28, "M", "Construction room entrance"],
+                    [23, "SS", "Constrction room right 1"],
+                    [39, "S", "Construction room right 2"],
+                    [24, "SS", "Contruction room left 2"],
+                    [25, "S", "contruction room left 1"],
+                    [27, "M", "5th Level spray 1"],
+                    [26, "S", "5th Level spray 2"],
+                    [59, "XL", "Ground Level XL"],
+                    [58, "M", "Left Side Ramp"],
+                    [60, "M", "Left Alley 1"],
+                    [52, "XL", "Left Alley 2"],
+                    [45, "L", "Left Alley 3"],
+                    [46, "SS", "Left Alley 4"],
+                    [47, "S", "Left Alley 5"],
+                    [48, "XL", "Left Alley 6"],
+                    [49, "S", "After Tape 1"],
+                    [50, "SS", "After Tape 2"],
+                    [51, "M", "After Tape 3"],
+                    [34, "L", "After Tape 4"],
+                    [40, "M", "Platform before tricks soul"],
+                    [4, "S", "Tricks soul"],
+                    [33, "L", "Tricks soul"],
+                    [57, "M", "Wallride with cans"],
+                    [6, "S", "Air soul"],
+                    [7, "M", "Air soul"]]
+        case 131072:
+        case LEVELS.RDH:
+            return [[8, "SS", "Electrical Pole Entrance 1"],
+                    [7, "SS", "Electrical Pole Entrance 2"],
+                    [15, "SS", "Grind Before Trailer 1"],
+                    [16, "S", "Grind Before Trailer 2"],
+                    [17, "SS", "Grind Before Trailer 3"],
+                    [18, "SS", "Grind Before Trailer 4"],
+                    [19, "S", "Grind Before Trailer 5"],
+                    [6, "SS", "Grind After Trailer 1"],
+                    [5, "SS", "Grind After Trailer 2"],
+                    [4, "S", "Grind After Trailer 3"],
+                    [3, "S", "Grind After Trailer 4"],
+                    [9, "S", "Grind Before Rhyth 1"],
+                    [10, "SS", "Grind Before Rhyth 2"],
+                    [54, "S", "Grind After Rhyth"],
+                    [53, "M", "Left of Pipe to Rhyth 2nd Spawn"],
+                    [60, "L", "Right of Pipe to Rhyth 2nd Spawn"],
+                    [52, "S", "Corner Jump to Tower"],
+                    [50, "S", "Grind before tower"],
+                    [47, "S", "Special Tower Unlock 1"],
+                    [48, "S", "Special Tower Unlock 2"],
+                    [49, "S", "Special Tower Unlock 3"],
+                    [56, "S", "Grind Around Amalgamated Building 1"],
+                    [57, "SS", "Grind Around Amalgamated Building 2"],
+                    [71, "S", "Grind Around Amalgamated Building 3"],
+                    [51, "S", "Inside Amalgamated Building"],
+                    [45, "L", "Under Special Unlock Tower"],
+                    [55, "S", "Roof next to Tower"],
+                    [22, "SS", "Ripskip door 1"],
+                    [21, "S", "Ripskip door 2"],
+                    [20, "M", "Ripskip door 3"],
+                    [23, "L", "1st Cop Fight Spray"],
+                    [11, "XL", "Spray after Billboard jump"],
+                    [74, "S", "2nd Cop Fight Spray 1"],
+                    [73, "SS", "2nd Cop Fight Spray 2"],
+                    [29, "L", "2nd Cop Fight Spray 3"],
+                    [12, "L", "Large AFTER 2nd Cop Fight"],
+                    [13, "XL", "Before Sauna 1"],
+                    [33, "L", "Before Sauna 2"],
+                    [77, "XL", "Sauna"],
+                    [25, "SS", "Before Water Tower Area 1"],
+                    [24, "S", "Before Water Tower Area 2"],
+                    [26, "M", "Before Water Tower Area 3"],
+                    [30, "L", "Before Water Tower Area 4"],
+                    [27, "S", "Before Water Tower Area 5"],
+                    [28, "SS", "Before Water Tower Area 6"],
+                    [14, "M", "3rd Cop Fight Trigger"],
+                    [64, "L", "3rd Cop Fight Area 1"],
+                    [32, "XL", "3rd Cop Fight Area 2"],
+                    [31, "L", "3rd Cop Fight Area 3"],
+                    [58, "L", "Water Tower Grind"],
+                    [34, "S", "Water Tower Top 1"],
+                    [78, "SS", "Water Tower Top 2"],
+                    [76, "L", "Special Soul Tower"]];
+        case 131073:
+        case LEVELS.SEWERS:
+            return [[8, "SS", "After floor 1 to 2"],
+                    [7, "SS", "Below center structure"],
+                    [26, "M", "Below center structure"],
+                    [16, "L", "Before brown room"],
+                    [30, "S", "Brown room"],
+                    [27, "S", "Near 100m room"],
+                    [10, "S", "Small water room"],
+                    [29, "SS", "Small water room"],
+                    [9, "S", "Small water room"],
+                    [28, "SS", "Small water room"],
+                    [5, "SS", "Tunnels #1"],
+                    [3, "SS", "Tunnels #2"],
+                    [4, "SS", "Tunnels #3"],
+                    [6, "SS", "Tunnels #4"],
+                    [20, "S", "Room after tunnels"],
+                    [22, "M", "Room after tunnels"],
+                    [23, "M", "Curved halfpipe highest floor"],
+                    [25, "L", "Curved halflpipe highest floor"],
+                    [24, "M", "Curved halfpipe highest floor M#2"],
+                    [17, "SS", "Curved halfpipe highest floor"],
+                    [18, "SS", "Curved halfpipe highest floor SS#2"],
+                    [13, "SS", "100m room 40m"],
+                    [32, "S", "100m room 70m"],
+                    [31, "M", "100m room 100m"]]
+        case 131075:
+        case LEVELS.BOTTOMPOINT:
+            return [[3, "SS", "Above Catwalk 1-4"],
+                    [4, "SS", "Above Catwalk 1-4"],
+                    [5, "SS", "Above Catwalk 1-4"],
+                    [6, "SS", "Above Catwalk 1-4"],
+                    [9, "L", "Points Room"],
+                    [10, "M", "Points Room"],
+                    [7, "S", "Tunnel before Cube"],
+                    [8, "S", "Tunnel before Cube"],
+                    [11, "M", "Tunnel before Cube"],
+                    [12, "M", "Tunnel before Cube"],
+                    [13, "M", "Catwalk near air"],
+                    [15, "S", "PJ 1 Blue Rail"],
+                    [19, "L", "PJ 1 Catwalk"],
+                    [18, "M", "PJ 1 Catwalk"],
+                    [16, "S", "PJ 1 Catwalk"],
+                    [17, "S", "PJ 1 Catwalk"], //CHECK ME?
+                    [14, "S", "PJ 1 Orange Rail"],
+                    [20, "L", "In halfpipe"],
+                    [21, "S", "PJ 2 Orange Rail"],
+                    [22, "S", "PJ 2 Blue Rail"],
+                    [29, "XL", "Slope"],
+                    [23, "S", "PJ 3 Orange Rail"],
+                    [24, "S", "PJ 3 Orange Rail"],
+                    [25, "S", "PJ 3 Orange Rail"],
+                    [28, "XL", "PJ 3 Catwalk"],
+                    [30, "L", "PJ 3 Catwalk"],
+                    [31, "S", "PJ 3 Catwalk"],
+                    [32, "S", "PJ 3 Catwalk"]];
+        case 131074:
+        case LEVELS.KIBO:
+            return [[27, "M", "M above entrance"],
+                    [13, "XL", "1st XL cretin cycle"],
+                    [29, "M", "M after XL"],
+                    [22, "L", "L cretin cycle"],
+                    [5, "XL", "2nd Xl cretin cycle on roof"],
+                    [31, "S", "S cat room"],
+                    [32, "SS", "SS cat room"],
+                    [30, "M", "M cat room"],
+                    [3, "S", "S escape cycle"],
+                    [4, "SS", "SS escape cycle"],
+                    [6, "S", "S escape cycle #2"],
+                    [36, "SS", "SS room with long right angle pipe"],
+                    [37, "SS", "SS room with long right angle pipe #2"],
+                    [33, "XL", "XL room with long right angle pipe"],
+                    [35, "SS", "SS room with long right angle pipe #3"],
+                    [34, "M", "M room with long right angle pipe"],
+                    [40, "SS", "SS near air 4"],
+                    [41, "S", "S near air 4"],
+                    [9, "S", "S escape cycle #4"],
+                    [8, "S", "S escape cycle #3"],
+                    [38, "M", "M near grind 20"],
+                    [10, "S", "S escape cycle #5"],
+                    [43, "S", "S in hole below escape cycle"],
+                    [44, "M", "M in hole below escape cycle"],
+                    [47, "M", "M near points 250k"],
+                    [46, "S", "S near points 250k"],
+                    [11, "XL", "XL after tunnel"],
+                    [12, "SS", "SS after tunnel"],
+                    [14, "S", "S after tunnel"],
+                    [21, "S", "S before boogie room"],
+                    [17, "L", "L on floor before boogie room"],
+                    [19, "L", "L on wall before boogie room"],
+                    [15, "M", "M on curved pipe before boogie room"],
+                    [52, "S", "S in boogie room"],
+                    [53, "M", "M in boogie room"],
+                    [51, "XL", "XL in boogie room"],
+                    [55, "L", "L in boogie room"],
+                    [72, "S", "S after furthest right wire up top"],
+                    [71, "M", "M near special gate"],
+                    [74, "L", "L near special gate"],
+                    [68, "M", "M under special gate on wire"],
+                    [78, "L", "L under special gate near blue cans"],
+                    [65, "S", "S right wire with cool quickturn"],
+                    [25, "M", "M near huh soul"],
+                    [26, "L", "L near huh? soul"],
+                    [7, "S", "S near huh? soul"],
+                    [16, "SS", "SS near huh? soul"],
+                    [24, "XL", "XL near huh? soul"],
+                    [73, "SS", "SS near tape"],
+                    [75, "L", "L near tape"],
+                    [61, "M", "M near special unlock"],
+                    [60, "L", "L near special unlock"]];
+        case 131076:
+        case LEVELS.FRZ:
+            return [[31, "M", "M 2nd floor"],
+                    [32, "XL", "XL 2nd floor"],
+                    [35, "S", "S 3rd floor"],
+                    [33, "M", "M 3rd floor"],
+                    [34, "L", "L 3rd floor"],
+                    [40, "M", "M 4th floor"],
+                    [36, "XL", "XL 4th floor"],
+                    [39, "SS", "SS 4th floor"],
+                    [38, "S", "S 4th floor"],
+                    [37, "M", "M 4th floor #2"],
+                    [10, "S", "S near 1st red device"],
+                    [41, "M", "M near 1st red device"],
+                    [9, "S", "S near 1st red device #2"],
+                    [42, "S", "S near 1st red device #3"],
+                    [11, "S", "S near 1st red device #4",],
+                    [12, "M", "M near 1st red device #2"],
+                    [13, "M", "M near 3rd red device"],
+                    [14, "M", "M near 3rd red device #2"],
+                    [43, "XL", "XL near last red device"],
+                    [49, "L", "L near 3rd red device"],
+                    [48, "L", "L near 3rd red device #2"],
+                    [50, "S", "S beside 4th red device"],
+                    [57, "L", "L closer to 5th red device"],
+                    [51, "L", "L further from 5th red device"],
+                    [52, "M", "M near 5th red device"],
+                    [53, "L", "L beside 6th red device"],
+                    [59, "M", "M before aaron jump"],
+                    [58, "S", "S before aaron jump"],
+                    [60, "S", "1st maze S"],
+                    [61, "SS", "1st maze SS"],
+                    [62, "S", "1st maze S #2"],
+                    [16, "M", "2nd maze M"],
+                    [17, "SS", "2nd maze SS"],
+                    [63, "S", "2nd maze S"],
+                    [64, "S", "2nd maze S #2"],
+                    [65, "M", "3rd maze M"],
+                    [66, "S", "3rd maze S"],
+                    [45, "SS", "SS above tape"],
+                    [46, "S", "S above tape"],
+                    [47, "SS", "SS above tape #2"],
+                    [44, "M", "M beside tape"],
+                    [3, "M", "6th blue device"],
+                    [67, "S", "7th blue device"],
+                    [4, "L", "Last blue device"],
+                    [7, "M", "M beside clip soul"],
+                    [29, "L", "L jumped to from clip soul"],
+                    [68, "S", "S 3rd blue device"]];
+        case 196608:
+        case LEVELS.x99TH:
+            return [[52, "XL", "Next to Special Unlock"],
+                    [39, "L", "Next to Blue Can Haven"],
+                    [69, "S", "Next to Blue Can Haven 2"],
+                    [35, "M", "Lady Pub Shop"],
+                    [38, "S", "Billboard Grind Jump 1"],
+                    [54, "L", "Billboard Grind Jump 2"],
+                    [48, "XL", "South of Mushroom"],
+                    [31, "M", "Rail to Roof 1"],
+                    [25, "SS", "Rail to Roof 2"],
+                    [26, "SS", "Rail to Roof 3"],
+                    [27, "SS", "Rail to Roof 4"],
+                    [36, "S", "Orange Shop near rail"],
+                    [47, "L", "Rail above 7 shop"],
+                    [37, "SS", "Rail left of 7 Shop"],
+                    [53, "S", "Rail before Blue Can Haven"],
+                    [3, "M", "Middle Pathway in Lightside"],
+                    [40, "L", "Hard Light"],
+                    [50, "S", "Below Hard Light 2"],
+                    [49, "S", "Below Hard Light 1"],
+                    [51, "M", "99th Special Soul"],
+                    [55, "XL", "North of Mushroom"],
+                    [12, "S", "Rails Grind 1"],
+                    [56, "M", "Rails Grind 2"],
+                    [17, "S", "Rails Grind 3"],
+                    [18, "S", "Rails Grind 4"],
+                    [57, "M", "Rails Grind 5"],
+                    [58, "S", "Rails Grind 6"],
+                    [60, "M", "After Rails Grind"],
+                    [33, "XL", "Water 1"],
+                    [29, "M", "Water 2"],
+                    [19, "SS", "Water 3"],
+                    [32, "L", "Water 4"],
+                    [20, "S", "Water 5"],
+                    [21, "S", "Water 6"],
+                    [22, "S", "Water 7"],
+                    [28, "M", "Water 8"],
+                    [42, "L", "Before Wallride to Dark"],
+                    [41, "M", "Hard Dark"],
+                    [65, "S", "Billboard to Hard Dark"],
+                    [9, "M", "Center of Dark 1"],
+                    [8, "S", "Center of Dark 2"],
+                    [7, "SS", "Center of Dark 3"],
+                    [6, "SS", "Center of Dark 4"],
+                    [5, "SS", "Center of Dark 5"],
+                    [4, "SS", "Center of Dark 6"],
+                    [24, "S", "Billboard Right of Dark"],
+                    [13, "S", "Billboard to Roof 1"],
+                    [14, "SS", "Billboard to Roof 2"],
+                    [16, "S", "Billboard to Roof 3"],
+                    [30, "L", "Billboard to Roof 4"],
+                    [71, "SS", "Dark Rails 1"],
+                    [66, "M", "Dark Rails 2"],
+                    [63, "S", "Dark Rails 3"],
+                    [68, "L", "Dark Rails 4"],
+                    [23, "M", "Dark Rails 5"],
+                    [64, "SS", "Dark Rails 6"],
+                    [70, "M", "Dark Rails 7"],
+                    [72, "S", "Dark Rails 8"],
+                    [67, "M", "Dark Rails 9"],
+                    [34, "L", "Dark Rails 10"],
+                    [43, "S", "Grind to Dark 1"],
+                    [61, "L", "Grind to Dark 2"],
+                    [44, "S", "Grind to Dark 3"],
+                    [62, "SS", "Grind to Dark 4"]];
+        case 196612:
+        case LEVELS.SKYSCRAPER:
+            return [[6, "S", "Top of Pyramid"],
+                    [33, "M", "Base of Pyramid"],
+                    [26, "L", "Under Pyramid"],
+                    [8, "S", "West of Center 1"],
+                    [15, "M", "West of Center 2"],
+                    [7, "SS", "West of Center 3"],
+                    [14, "XL", "West of Center 4"],
+                    [9, "SS", "West of Center 5"],
+                    [41, "L", "South East of Center 1"],
+                    [23, "M", "South East of Center 2"],
+                    [39, "M", "Above HW0 1"],
+                    [40, "L", "Above HW0 2"],
+                    [11, "M", "After Huge Billboards on Crates"],
+                    [17, "L", "Before Points Soul Crane Area"],
+                    [34, "L", "Grind Soul Crane Area"],
+                    [28, "L", "Points Soul Crane Area"],
+                    [19, "L", "Before Graffiti Stop 1"],
+                    [38, "L", "Before Graffiti Stop 2"],
+                    [42, "L", "Pink Half Pipes Left Side"],
+                    [36, "L", "Boost after Pink Half Pipes Left Side"],
+                    [5, "L", "Ramps to Pink Half Pipes Right Side"],
+                    [10, "XL", "Before Pink Halfpipes Right Side"],
+                    [35, "L", "Pink Half Pipes Right Side"],
+                    [31, "S", "Ramp to Satelite"],
+                    [18, "L", "Any% Deathwarp Spray"],
+                    [30, "S", "Satelite on top of crates"],
+                    [29, "L", "Observatory Deathwarp"],
+                    [37, "L", "Below crates near Observatory"],
+                    [47, "L", "On top of Observatory 1"],
+                    [46, "M", "On top of Observatory 2"],
+                    [48, "XL", "On top of Observatory 3"],
+                    [45, "M", "Next to block going to Observatory"],
+                    [12, "M", "Any% Left Side Warp 1"],
+                    [16, "L", "Any% Left Side Warp 2"],
+                    [44, "XL", "Next to Wallride to Tricks Soul"],
+                    [27, "L", "Tricks Soul location"],
+                    [22, "S", "Satelite grind near Tricks Soul"],
+                    [25, "L", "North East of Air Soul Crane"],
+                    [20, "L", "Right next to Air Soul Crane"],
+                    [13, "M", "Just before Air Soul Crane"]];
+        case 196609:
+        case LEVELS.SKYDINO:
+            return [[5, "XL", "Left of start"],
+                    [28, "M", "First spiral medium"],
+                    [29, "S", "First spiral small"],
+                    [30, "S", "Second spiral small"],
+                    [31, "M", "Second spiral medium"],
+                    [4, "M", "points 10k medium"],
+                    [6, "XL", "points 10k XL"],
+                    [25, "M", "medium near loops"], //check me
+                    [18, "XL", "XL on the side of air 6 theatre"],
+                    [17, "XL", "Grind 50 XL"],
+                    [27, "S", "Small above tape on a green rail"],
+                    [10, "S", "Small#1 ground level of tape"],
+                    [11, "S", "Small#2 ground level of tape"],
+                    [12, "M", "Medium above tape red rail"],
+                    [13, "S", "Small above tape red rail"],
+                    [32, "L", "Large close to platform swing default #1"],
+                    [20, "L", "Large close to platform swing default #2"],
+                    [7, "S", "Small near tail of Trex"],
+                    [8, "M", "Medium near tail of Trex"],
+                    [19, "SS", "Inside Trex towards special #1"],
+                    [21, "S", "Inside Trex towards special #1"],
+                    [14, "SS", "Inside Trex towards special #2"],
+                    [16, "SS", "Inside Trex towards special #3"],
+                    [22, "S", "Inside Trex towards special #2"],
+                    [3, "SS", "SS near special unlock"],
+                    [24, "SS", "Head of bronto"],
+                    [23, "XL", "Back of bronto"],
+                    [9, "S", "Small near tricks 100"],
+                    [15, "L", "Large inside tricks 100"]];
+        case 196611:
+        case LEVELS.HWY0:
+            return [[31, "L", "Curved wall L"],
+                    [4, "M", "Curved wall M"],
+                    [17, "SS", "Billboard SS"],
+                    [18, "S", "Billboard S"],
+                    [19, "SS", "Billboard SS#2"],
+                    [20, "S", "Billboard S#2"],
+                    [16, "M", "Medium above soda"],
+                    [21, "L", "L above soda"],
+                    [22, "XL", "XL above soda"],
+                    [15, "S", "Winding pipes S"],
+                    [14, "SS", "Winding pipes SS"],
+                    [13, "S", "Winding pipes S#2"],
+                    [12, "SS", "Winding pipes SS#2"],
+                    [10, "S", "Winding pipes S#3"],
+                    [9, "SS", "Winding pipes SS#3"],
+                    [23, "SS", "Special wallride SS"],
+                    [24, "S", "Special wallride S"],
+                    [26, "SS", "Special wallride SS#2"],
+                    [25, "S", "Special wallride S#2"],
+                    [27, "SS", "Special wallride SS#3"],
+                    [28, "S", "Special wallride S#3"],
+                    [29, "S", "Trashpit billboard #1"],
+                    [3, "S", "Trashpit billboard #2"],
+                    [5, "XL", "XL near points 90k"],
+                    [7, "M", "Medium near entrance highway"]];
+        default: // Case for Stadium and Garage
+            return [];
+    }
+}
+
+}
+
+init();

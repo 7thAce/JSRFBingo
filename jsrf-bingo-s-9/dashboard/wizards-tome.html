@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="stylesheet" href="wizards-tome.css">
+		<style>
+			.monospace {
+				font-family: monospace;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Five main sections: Game info, Statuses, Game State, Chat, and Game Controls -->
+		<div class="panel-row">
+			<div id="gameInfo" class="panel-row">
+				<div id="leftTeamInfo" class="teamInfo">
+					Left Team Information
+					<div class="form-group"><span>Preset Team</span><select id="leftTeamSelect" class="form-field"><option value="">Select a team</option></select></div>
+					<div class="form-group"><span>Name</span><input id="leftTeamName"			class="form-field" type="text" placeholder="Team Name"></div>
+					<div class="form-group"><span>Web Color</span><input id="leftInColor"		class="form-field" type="text" placeholder="Website Color"></div>
+					<div class="form-group"><span>Out Color</span><input id="leftOutColor"		class="form-field" type="text" placeholder="Display Color"></div>
+					<div class="form-group"><span>Multi</span><input id="leftMultiLink"			class="form-field" type="text" placeholder="Multi Link"></div>
+					<br>Top Player
+					<div class="form-group"><span>Name</span><input id="topLeftName"			class="form-field" type="text" placeholder="Top Left Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="topLeftPronouns"	class="form-field" type="text" placeholder="Top Left Pronouns"></div>
+					<br>Bottom Player
+					<div class="form-group"><span>Name</span><input id="bottomLeftName"			class="form-field" type="text" placeholder="Bottom Left Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="bottomLeftPronouns"	class="form-field" type="text" placeholder="Bottom Left Pronouns"></div>
+					<button id="saveLeftTeam">Save Left Team</button>
+				</div>
+				<div id="rightTeamInfo" class="teamInfo">
+					Right Team Information
+					<div class="form-group"><span>Preset Team</span><select id="rightTeamSelect" class="form-field"><option value="">Select a team</option></select></div>
+					<div class="form-group"><span>Name</span><input id="rightTeamName"			class="form-field" type="text" placeholder="Team Name"></div>
+					<div class="form-group"><span>Web Color</span><input id="rightInColor"		class="form-field" type="text" placeholder="Website Color"></div>
+					<div class="form-group"><span>Out Color</span><input id="rightOutColor"		class="form-field" type="text" placeholder="Display Color"></div>
+					<div class="form-group"><span>Multi</span><input id="rightMultiLink"		class="form-field" type="text" placeholder="Multi Link"></div>
+					<br>Top Player
+					<div class="form-group"><span>Name</span><input id="topRightName"			class="form-field" type="text" placeholder="Top Right Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="topRightPronouns"	class="form-field" type="text" placeholder="Top Right Pronouns"></div>
+					<br>Bottom Player
+					<div class="form-group"><span>Name</span><input id="bottomRightName"		class="form-field" type="text" placeholder="Bottom Right Name"></div>
+					<div class="form-group"><span>Pronouns</span><input id="bottomRightPronouns"class="form-field" type="text" placeholder="Bottom Right Pronouns"></div>
+					<button id="saveRightTeam">Save Right Team</button>
+				</div>
+			</div>
+
+
+			<div id="connectionsStatus" class="panel">
+				<table id="connectionsTable">
+					<tr>
+						<td>Bingo Connection Status...</td>
+						<td>Multinode</td>
+						<td>Automarker</td>
+						<td>Streamlink</td>
+					</tr>
+					<tr>
+						<td>Top Left</td>
+						<td class="connected">✔</td>
+						<td class="connected">✔</td>
+						<td><button id="launchStreamlinkTL">Launch TL</button></td>
+					</tr>
+					<tr>
+						<td>Bottom Left</td>
+						<td class="disconnected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkBL">Launch BL</button></td>
+					</tr>
+					<tr>
+						<td>Top Right</td>
+						<td class="disconnected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkTR">Launch TR</button></td>
+					</tr>
+					<tr>
+						<td>Bottom Right</td>
+						<td class="connected">✗</td>
+						<td class="disconnected">✗</td>
+						<td><button id="launchStreamlinkBR">Launch BR</button></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+		<div id="kevingoStatus" style="visibility:hidden">
+			Waiting...
+		</div>
+		<div id="automarkStatus" style="visibility:hidden">
+			Waiting...
+		</div>
+
+		<div class="panel-row">
+			<div id="gameState" class="panel"></div>
+			<div id="chat" class="panel"></div>
+			<div id="gameControls" class="panel">
+				<div class="kevingo-button-row">
+					<button class="kevingo-launch" onclick="launchKevingo('bango')">Launch Bango</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bingo')">Launch Bingo</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bongo')">Launch Bongo</button>
+					<button class="kevingo-launch" onclick="launchKevingo('bungo')">Launch Bungo</button>
+				</div>
+				<button id="launchGameReaderButton" onclick="launchGameReader()">Connect to players multi links</button>
+				<br>Use these for match score! Left, Center, and Right click for the teams!
+				<div id="matchScoreControls" class="match-score-controls">
+					<div class="match-score-square" id="Bo5-L1" title="Bo5-L1">1</div>
+					<div class="match-score-square" id="Bo5-L2,Bo3-L1" title="Bo5-L2 + Bo3-L1">2</div>
+					<div class="match-score-square" id="Bo5-5,Bo3-3" title="Bo5-5 + Bo3-3">3</div>
+					<div class="match-score-square" id="Bo5-R2,Bo3-R1" title="Bo5-R2 + Bo3-R1">4</div>
+					<div class="match-score-square" id="Bo5-R1" title="Bo5-R1">5</div>
+				</div>
+				<div class="form-group"><span>Commentator 1</span><input id="commentator1"		class="form-field" type="text" placeholder="Commentator Name"></div>
+				<div class="form-group"><span>Commentator 2</span><input id="commentator2"		class="form-field" type="text" placeholder="Commentator Name"></div>
+			</div>		
+		</div>
+		<!-- <button id="launchServerButton" onclick="launchServer()">Launch Server</button>
+		<button id="launchClientButton" onclick="launchClient()">Launch Client</button> -->
+		<script src="./wizards-tome.js"></script>
+	</body>
+</html>

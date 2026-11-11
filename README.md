@@ -13,7 +13,7 @@ Goals:
 
 See it in action [live on Twitch](https://twitch.tv/jsrfbingo) or on our [YouTube vods page](https://www.youtube.com/@JSRFBingo).
 
-Developed by 7thAce. Graphic design by Eclapricious.
+Developed by 7thAce, Bee, and Kevin. Graphic design by Eclapricious.
 Organized by twinkachu. Pinball by Acebats.
 
 Built with [NodeCG](http://github.com/nodecg/nodecg).

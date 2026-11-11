@@ -31,6 +31,18 @@
         PLAYOFFS: "gfx/StandingsPlayoffs.png"
     });
 
+    const SCHEDULE_BOX_SVG = "gfx/schedulebox.svg";
+    const SCHEDULE_BOX_TEAM_SLOTS = Object.freeze([
+        ["1-Team-L", "team1Color"],
+        ["1-Team-R", "team2Color"],
+        ["2-Team-L", "team1Color"],
+        ["2-Team-R", "team2Color"],
+        ["3-Team-L", "team1Color"],
+        ["3-Team-R", "team2Color"],
+        ["4-Team-L", "team1Color"],
+        ["4-Team-R", "team2Color"]
+    ]);
+
     const STANDINGS_FRAME_ROWS = Object.freeze([
         "Standings-1st",
         "Standings-2nd",
@@ -64,7 +76,8 @@
             hasAnimatedStandingsLoad: false,
             activeBracketView: null,
             roundRobinScheduleCycle: null,
-            inlineBackgrounds: new Map()
+            inlineBackgrounds: new Map(),
+            inlineScheduleBox: null
         };
 
         // ---------------------------------------------------------------------
@@ -148,7 +161,9 @@
         function createRoundRobinColumn(matches, roundNumber) {
             const column = document.createElement("div");
             column.className = "rr-round";
-            column.appendChild(createDiv("rr-round-bg"));
+            const scheduleBox = createDiv("rr-round-bg");
+            column.appendChild(scheduleBox);
+            renderScheduleBox(scheduleBox, matches);
             column.appendChild(createDiv("rr-round-label", `Round ${roundNumber}`));
             for (const match of matches) {
                 column.appendChild(createRoundRobinMatch(match));
@@ -492,6 +507,68 @@
             layer.replaceChildren(...rounds.map((matches, index) => createRoundRobinColumn(matches, startRound + index)));
         }
 
+        // The source schedule box is an SVG, not a CSS colorable asset. Inline a
+        // fresh copy for each round, then override its eight team-accent paths.
+        // Each async insertion is tied to its colors so an older refresh cannot
+        // overwrite a newer round while the SVG request is in flight.
+        function renderScheduleBox(container, matches) {
+            const colors = SCHEDULE_BOX_TEAM_SLOTS.map(([, colorKey], index) => {
+                const match = matches[Math.floor(index / 2)];
+                return match?.[colorKey] || "#FF0000";
+            });
+            const colorSignature = colors.join(",");
+            container.dataset.scheduleBoxColors = colorSignature;
+
+            readInlineScheduleBox()
+                .then((svgText) => {
+                    if (container.dataset.scheduleBoxColors !== colorSignature) {
+                        return;
+                    }
+
+                    const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+                    const svg = doc.documentElement;
+                    if (!svg || svg.nodeName.toLowerCase() !== "svg") {
+                        throw new Error(`Schedule box is not an SVG at ${SCHEDULE_BOX_SVG}`);
+                    }
+
+                    const scheduleBox = document.importNode(svg, true);
+                    scheduleBox.classList.add("schedule-box-accents");
+                    scheduleBox.setAttribute("aria-hidden", "true");
+                    scheduleBox.setAttribute("focusable", "false");
+
+                    // The source asset uses generic .s0-.s11 class names. Once
+                    // inlined, those rules also match the standings frame's
+                    // .s0-.s3 paths and darken its greys. Accent colors below are
+                    // explicit inline styles, so the imported stylesheet is not
+                    // needed for this overlay.
+                    scheduleBox.querySelector("style")?.remove();
+
+                    SCHEDULE_BOX_TEAM_SLOTS.forEach(([pathId], index) => {
+                        const teamAccent = scheduleBox.querySelector(`[id="${pathId}"]`);
+                        if (teamAccent) {
+                            // The source SVG's .s3-.s11 rules beat a presentation
+                            // attribute, so this must be an inline SVG style.
+                            teamAccent.style.fill = colors[index];
+                        } else {
+                            logWarn(`Schedule box team accent ${pathId} not found.`);
+                        }
+                    });
+
+                    // Keep the original SVG as a CSS background so all of its
+                    // neutral greys retain their previous browser rendering. The
+                    // inline copy exists only to replace the eight team tabs.
+                    const teamAccentIds = new Set(SCHEDULE_BOX_TEAM_SLOTS.map(([pathId]) => pathId));
+                    scheduleBox.querySelectorAll("path").forEach((path) => {
+                        if (!teamAccentIds.has(path.id)) {
+                            path.remove();
+                        }
+                    });
+
+                    container.replaceChildren(scheduleBox);
+                })
+                .catch((error) => logWarn("Inline schedule box failed.", error));
+        }
+
         function setRoundRobinVisibility(isVisible) {
             const container = getRoundRobinContainer();
             if (!container) {
@@ -728,6 +805,20 @@
             }
 
             return state.inlineBackgrounds.get(imagePath);
+        }
+
+        function readInlineScheduleBox() {
+            if (!state.inlineScheduleBox) {
+                state.inlineScheduleBox = fetch(SCHEDULE_BOX_SVG, { cache: "no-store" }).then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Schedule box read failed (${response.status}) at ${SCHEDULE_BOX_SVG}`);
+                    }
+
+                    return response.text();
+                });
+            }
+
+            return state.inlineScheduleBox;
         }
 
         function prepareStandingsFrame(svg) {

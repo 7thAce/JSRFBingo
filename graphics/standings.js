@@ -96,6 +96,16 @@
     // Just kinda normalized so. we can easily pass to standings-renderer
     // -------------------------------------------------------------------------
 
+    // Schedule-box team accents use this when the standings feed has not supplied
+    // a valid team color yet. Keep this intentionally loud so missing data is easy
+    // to spot on the broadcast graphic.
+    const DEFAULT_TEAM_COLOR = "#FF0000";
+
+    function normalizeTeamColor(color) {
+        const value = String(color || "").trim();
+        return /^#[0-9a-f]{3,8}$/i.test(value) ? value : DEFAULT_TEAM_COLOR;
+    }
+
     function formatPlayers(players = []) {
         return players.join(" & ");
     }
@@ -106,6 +116,10 @@
 
     function buildAbbreviationMap(standings = []) {
         return new Map(standings.map((team) => [team.team, team.abbreviation]).filter(([, abbreviation]) => abbreviation));
+    }
+
+    function buildTeamColorMap(standings = []) {
+        return new Map(standings.map((team) => [team.team, normalizeTeamColor(team.color)]));
     }
 
     function getTeamDisplayName(teamName, abbreviations) {
@@ -137,16 +151,18 @@
         };
     }
 
-    function buildMatch(match, abbreviations) {
+    function buildMatch(match, abbreviations, teamColors) {
         return {
             team1: getTeamDisplayName(match.team1, abbreviations),
             team2: getTeamDisplayName(match.team2, abbreviations),
-            score: `${match.score1}-${match.score2}`
+            score: `${match.score1}-${match.score2}`,
+            team1Color: teamColors.get(match.team1) || DEFAULT_TEAM_COLOR,
+            team2Color: teamColors.get(match.team2) || DEFAULT_TEAM_COLOR
         };
     }
 
-    function buildRounds(results = {}, abbreviations) {
-        return Object.values(results).map((matches) => matches.map((match) => buildMatch(match, abbreviations)));
+    function buildRounds(results = {}, abbreviations, teamColors) {
+        return Object.values(results).map((matches) => matches.map((match) => buildMatch(match, abbreviations, teamColors)));
     }
 
     function buildPlayoffMatch(match, abbreviateTeams = false, abbreviations = new Map()) {
@@ -182,10 +198,11 @@
     function buildPayload(data) {
         const standings = Array.isArray(data.standings) ? data.standings : [];
         const abbreviations = buildAbbreviationMap(standings);
+        const teamColors = buildTeamColorMap(standings);
 
         return {
             standings: standings.map(buildTeam),
-            rounds: buildRounds(data.results, abbreviations),
+            rounds: buildRounds(data.results, abbreviations, teamColors),
             playoffs: buildPlayoffs(data.playoffs, abbreviations)
         };
     }

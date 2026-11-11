@@ -1,6 +1,10 @@
 const Peer = require('peerjs-on-node').Peer;
 
 let multiID = null;
+let conn = null;
+let connectionTimeout = null;
+let started = false;
+let disconnecting = false;
 const peer = new Peer(null, {
     config: {
         iceServers: [
@@ -10,16 +14,32 @@ const peer = new Peer(null, {
     }
 });
 
-process.on('message', (message) => {
-    multiID = message.multiID;
+function disconnectClient() {
+    if (disconnecting) return;
+    disconnecting = true;
+    clearTimeout(connectionTimeout);
+
+    if (conn) {
+        conn.close();
+    }
+    peer.destroy();
+
+    if (process.connected) {
+        process.send({ type: 'disconnected' }, () => process.exit(0));
+    } else {
+        process.exit(0);
+    }
+}
+
+function connectClient() {
     console.log(`Received multiID: ${multiID}`);
 
     peer.on("open", (id) => {
         console.log(`Peer open with id: ${id}`);
         console.log(`Attempting to connect with id ${multiID}`);
-        const conn = peer.connect(multiID);
+        conn = peer.connect(multiID);
 
-        const connectionTimeout = setTimeout(() => {
+        connectionTimeout = setTimeout(() => {
             console.log(`Connection to ${multiID} timed out after 30 seconds.`);
             process.send({ type: 'error', error: 'timeout' });
         }, 30000);
@@ -55,4 +75,16 @@ process.on('message', (message) => {
     peer.on("disconnected", () => {
         console.log("Peer disconnected from server.");
     });
+}
+
+process.on('message', (message) => {
+    if (message.type === 'disconnect') {
+        disconnectClient();
+        return;
+    }
+    if (started) return;
+
+    started = true;
+    multiID = message.multiID;
+    connectClient();
 });

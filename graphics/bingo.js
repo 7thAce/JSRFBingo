@@ -138,10 +138,10 @@ function updateTeamData2(teamsData) {
     document.getElementById("leftTopPronouns").textContent = leftTeam.displayData.player1.pronouns;
     document.getElementById("leftBottomPronouns").textContent = leftTeam.displayData.player2.pronouns;
     document.getElementById("leftTeamScore").textContent = String(leftTeam.score).padStart(2, '0');
-    document.getElementById("leftTopPlayer").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
-    document.getElementById("leftBottomPlayer").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
-    document.getElementById("leftTopPronouns").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
-    document.getElementById("leftBottomPronouns").style.color = getContrastingTextColor(leftTeam.displayData.outputColor);
+    document.getElementById("leftTopPlayer").style.color = "#FFFFFF";
+    document.getElementById("leftBottomPlayer").style.color = "#FFFFFF";
+    document.getElementById("leftTopPronouns").style.color = "#FFFFFF";
+    document.getElementById("leftBottomPronouns").style.color = "#FFFFFF";
 
 
     document.getElementById("rightTeamName").textContent = rightTeam.displayData.name;
@@ -150,10 +150,10 @@ function updateTeamData2(teamsData) {
     document.getElementById("rightTopPronouns").textContent = rightTeam.displayData.player1.pronouns;
     document.getElementById("rightBottomPronouns").textContent = rightTeam.displayData.player2.pronouns;
     document.getElementById("rightTeamScore").textContent = String(rightTeam.score).padStart(2, '0');
-    document.getElementById("rightTopPlayer").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
-    document.getElementById("rightBottomPlayer").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
-    document.getElementById("rightTopPronouns").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
-    document.getElementById("rightBottomPronouns").style.color = getContrastingTextColor(rightTeam.displayData.outputColor);
+    document.getElementById("rightTopPlayer").style.color = "#FFFFFF";
+    document.getElementById("rightBottomPlayer").style.color = "#FFFFFF";
+    document.getElementById("rightTopPronouns").style.color = "#FFFFFF";
+    document.getElementById("rightBottomPronouns").style.color = "#FFFFFF";
 
     if (players["tl"]?.name != leftTeam.displayData.player1.name) {
         players["tl"] = new DisplayPlayer(leftTeam.displayData.player1);
@@ -536,14 +536,17 @@ function regionMark(boardSquare) {
 
     if (boardSquare.region == "shibuya") {
         return "#16A026";
+        return "#89E989";
     }
 
     if (boardSquare.region == "kogane") {
         return "#f00";
+        return "#FF5959";
     }
 
     if (boardSquare.region == "benten") {
         return "#44f";
+        return "#A0BAFF";
     }
 
     return "#fff";

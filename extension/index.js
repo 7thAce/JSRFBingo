@@ -7,14 +7,12 @@ const WS_SOURCE = "Server"
 
 const { launchKevingoReader } = require("./Readers/Kevingo/KevingoReader.js");
 const { launchAutomarker } = require("./MultiNode/multinode.js");
-const { launchGameReader } = require("./MultiNode/gamereader.js");
+const { launchGameReader } = require("./MultiNode/gameconnector.js");
 const { message } = require('git-rev-sync');
 
 const GRAFFITIPOINTS = 3;
 const BINGOPOINTS = 2;
 const SQUAREPOINTS = 1;
-
-let kevingoReader = null;
 
 const LEVELS = Object.freeze({
     GARAGE: "Garage",
@@ -55,9 +53,17 @@ const EVENT_TYPES = Object.freeze({
     UNKNOWN: "Other/Unknown"
 });
 
+const STATUSES = Object.freeze({
+    CONNECTED: "Connected",
+    DISCONNECTED: "Disconnected",
+    UNKNOWN: "Unknown",
+    WAITING: "Waiting"
+})
+
 let currentBingoGame = null;
 let leftTeamData = null;
 let rightTeamData = null;
+let kevingo = null;
 
 shibuyaAreas = [LEVELS.DOGEN, LEVELS.SHIBUYA, LEVELS.CHUO, LEVELS.HIKAGE];
 koganeAreas = [LEVELS.RDH, LEVELS.SEWERS, LEVELS.BOTTOMPOINT, LEVELS.KIBO, LEVELS.FRZ];
@@ -83,6 +89,7 @@ function init() {
     leftTeamData = new Team("left");
     rightTeamData = new Team("right");
     currentBingoGame = new BingoGame();
+    kevingo = new Kevingo(null, null);
     allAreas.forEach(area => {
         areasDict[area] = new LevelMetadata(area);
     });
@@ -139,6 +146,10 @@ ws_read.on('connection', function connection(ws) {
     })
 });
 
+function requestData(dataName) {
+    return;
+}
+
 // function sendDataToConnection(connectionName) {
     
 // }
@@ -173,7 +184,7 @@ module.exports = function(nodecg) {
     nodecg.listenFor('launch-kevingo', (idData) => {
         // nodecg.log.info(` !! DEBUG: idData = ${JSON.stringify(idData)}`);
         nodecg.log.info(`Launching Kevingo (${idData})...`);
-        kevingoReader = launchKevingoReader(idData);
+        kevingo = new Kevingo(idData, launchKevingoReader(idData));
     });
 
     nodecg.listenFor('launch-game-reader', (idData) => {
@@ -270,8 +281,13 @@ function handleMessage(message) {
     console.log(message);
     switch (message["type"]) {
         case "connect":
-            console.log(`Client connected: ${message["source"]}`);
             handleConnect(message);
+            return;
+        case "kevingo_connect":
+            handleKevingoConnect(message);
+            return;
+        case "kevingo_disconnect":
+            handleKevingoDisconnect(message);
             return;
         case "new_board":
             console.log("Received new board data.");
@@ -356,6 +372,12 @@ function handleMessage(message) {
         case "kill_combo":
             handleKillCombo(message["message"]);
             return;
+        case "automarker_connect":
+            handleAutomarkerConnect(message["message"]);
+            return;
+        case "automarker_disconnect":
+            handleAutomarkerDisconnect(message["message"]);
+            return;
         case "automarker_players":
             handleAutomarkerPlayersUpdate(message["message"]);
             return;
@@ -376,8 +398,29 @@ function handleMessage(message) {
 // Handlers
 
 function handleConnect(message) {
+    console.log(`Client connected: ${message["source"]}`);
     return;
 }
+
+function handleKevingoConnect(message) {
+    console.log(`Kevingo client connected: ${message["source"]}`);
+    kevingo.chatUrl = message;
+    kevingo.status = STATUSES.CONNECTED;
+    kevingo.url = "https://bingo.kevcyg.net"; // This will need to be updated with multiple kevingos
+    publish("kevingo_connected", kevingo);
+}
+
+function handleKevingoDisconnect(message) {
+    if (kevingo.chatUrl == message) {
+        console.log(`Kevingo client disconnected: ${message["source"]}`);
+        kevingo.status = STATUSES.DISCONNECTED;
+        kevingo.chatUrl = null;
+        kevingo.url = null;
+        publish("kevingo_disconnected", kevingo);
+        return;
+    }
+    console.warn(`Received disconnect for unknown kevingo chat URL: ${message}`);
+}    
 
 function handleNewBoard(boardData) {
     archiveCurrentGame();
@@ -550,6 +593,18 @@ function handleTeamDataUpdate(message) {
 function handleKillCombo(message) {
     getTeamFromID(message["teamID"]).resetData();
     // do we just want to gen a new game and set the teams?
+    return;
+}
+
+function handleAutomarkerConnect(message) {
+    console.log(`Automarker connected from ${message["multiID"]}.`);
+    publish("peerjs_connected", message["multiID"]);
+    return;
+}
+
+function handleAutomarkerDisconnect(message) {
+    console.log(`Automarker disconnected from ${message["multiID"]}.`);
+    publish("peerjs_disconnected", message["multiID"]);
     return;
 }
 
@@ -773,6 +828,28 @@ class GameEvent {
     }
 }
 
+class Kevingo {
+    status = null;
+    url = null;
+    chatUrl = null;
+    reader = null;
+
+    constructor(url, wsConn) {
+        this.url = url;
+        this.reader = wsConn;
+    }
+}
+
+class SurgeConnection {
+    status = null;
+    names = [];
+    id = null;
+
+    constructor(id) {
+        this.id = id;
+    }
+}
+
 class Split {
     sniper = null;
     sniped = null;
@@ -936,6 +1013,7 @@ class Team {
     maxScore = 0;
     bingoCount = 0;
     graffitiProgress = {};
+    
 
     constructor(id) {
         this.id = id;

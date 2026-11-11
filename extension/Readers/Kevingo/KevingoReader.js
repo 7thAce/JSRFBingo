@@ -29,7 +29,6 @@ const LIGHTCOLORS = Object.freeze({
 })
 
 function launchKevingoReader(kevingoWSURL) {
-    let vowel = 
     console.log("Attempting to launch Kevingo Reader with URL: " + kevingoWSURL);
     kevingo = new WebSocket(kevingoWSURL);
     nodecgServer = new WebSocket('ws://localhost:7135');
@@ -44,8 +43,11 @@ function launchKevingoReader(kevingoWSURL) {
         sendToServer("connect", "Connected");
     }
 
-    kevingo.onclose = (event) => console.log("Disconnected from WebSocket server", event);
-    kevingo.onerror = (error) => console.error("WebSocket error:", error);
+    kevingo.onclose = (event) => {
+        console.log("Disconnected from WebSocket server", event);
+        sendToServer("kevingo_disconnect", kevingoWSURL);
+    }
+    // kevingo.onerror = (error) => console.error("WebSocket error:", error);
 
     kevingo.on("message", function message(data) {
         processWebsocketMessage(JSON.parse(data));
@@ -57,8 +59,8 @@ function launchKevingoReader(kevingoWSURL) {
 function processWebsocketMessage(data) {
     if (data["type"] == "history") return;
     if (data["type"] == "user_list") return;
-    console.log("Received message from Kevingo:");
-    console.log(data);
+    // console.log("Received message from Kevingo:");
+    // console.log(data);
     if (data["type"] == "board") { processBoard(data, "board_update"); }
     if (data["type"] == "new_board") { processBoard(data, "new_board"); }
     if (data["type"] == "message") { processChat(data); }

@@ -6,7 +6,32 @@ const WS_SOURCE = "Dashboard"
 const server_ws = new WebSocket("ws://localhost:7135");
 
 const teamsRep = nodecg.Replicant("teams", {defaultValue: {}, persistent: true});
-let teamsData = {};
+
+const playerDict = {"7thAce": {"name": "7thAce", "pronouns": "she/her"},
+                    "Kevin": {"name": "Kevin", "pronouns": "he/him"},
+                    "Acebats": {"name": "Acebats", "pronouns": "he/him"},
+                    "SylvieT": {"name": "SylvieT", "pronouns": "she/her"},
+                    "jon": {"name": "jon", "pronouns": "he/him"},
+                    "Yayo": {"name": "YayodelaRiva", "pronouns": "he/him"},
+                    "yomsa": {"name": "yomsa", "pronouns": "she/her"},
+                    "vaen": {"name": "vaen", "pronouns": "she/they"},
+                    "daft7": {"name": "daft7", "pronouns": "he/him"},
+                    "Miku_ds": {"name": "Miku_ds", "pronouns": "he/him"},
+                    "nago": {"name": "nago", "pronouns": "she/they"},
+                    "shovelclaws": {"name": "claws", "pronouns": "it/its"},
+                    "nae": {"name": "Naestrinus", "pronouns": "any/all"},
+                    "lohsa": {"name": "lohsa", "pronouns": "he/him"},
+                    "misc": {"name": "misc", "pronouns": "he/him"},
+                    "Fatalr0ck": {"name": "Fatalr0ck", "pronouns": "he/him"},
+                    "flashy": {"name": "flashy", "pronouns": "he/him"},
+                    "koren": {"name": "koren", "pronouns": "they/she"},
+                    "SyiLenSa": {"name": "SyiLenSa", "pronouns": "he/him"},
+                    "dynamight": {"name": "dynamight", "pronouns": "he/him"},
+                    "LaurieDBunnykins": {"name": "LaurieBunny", "pronouns": "she/her"},
+                    "bee": {"name": "bee", "pronouns": "she/her"}
+                };
+
+const teamsData = {};
 
 server_ws.onopen = () => {
     console.log("Connected to WebSocket server.");
@@ -17,16 +42,74 @@ server_ws.onclose = () => {
     console.log("Disconnected from WebSocket server.");
 };
 
-// server_ws.addEventListener("message", (event) => {
-//     let messageData = JSON.parse(event.data);
-//     if (messageData.type == "game_")
-// });
+server_ws.addEventListener("message", (event) => {
+    let messageData = JSON.parse(event.data);
+    switch (messageData["type"]) {
+        case "kevingo_connected":
+            console.log("Kevingo connected! Update the graphic!");
+            document.getElementById("kevingoStatus").textContent = `Connected to ${messageData["message"]["url"]}`;
+            return;
+        case "kevingo_disconnected":
+            console.log("Kevingo disconnected! Update the graphic!");
+            document.getElementById("kevingoStatus").textContent = "Disconnected";
+            return;
+        case "peerjs_connected":
+            console.log("PeerJS connected! Update the graphic!");
+            document.getElementById("automarkStatus").textContent = "Connected";
+            return;
+        case "peerjs_disconnected":
+            console.log("PeerJS disconnected! Update the graphic!");
+            document.getElementById("automarkStatus").textContent = "Disconnected";
+            return;
+    }
+});
 
 window.addEventListener('beforeunload', () => {
     localStorage.setItem('teamDataSave', JSON.stringify(teamsData));
 });
 
+function populateTeamDropdowns() {
+    const selectOptions = Object.keys(teamDict).sort();
+    ["leftTeamSelect", "rightTeamSelect"].forEach((selectId) => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = '<option value="">Select a team</option>';
+        selectOptions.forEach((teamKey) => {
+            const option = document.createElement("option");
+            option.value = teamKey;
+            option.textContent = teamKey;
+            select.appendChild(option);
+        });
+    });
+}
+
+function applyTeamPreset(teamSide, teamKey) {
+    const teamInfo = teamDict[teamKey];
+    if (!teamInfo) return;
+
+    const isLeft = teamSide === "left";
+    const teamLabel = isLeft ? "Left" : "Right";
+    const teamNameInput = document.getElementById(`${isLeft ? "left" : "right"}TeamName`);
+    const topNameInput = document.getElementById(`top${teamLabel}Name`);
+    const topPronounsInput = document.getElementById(`top${teamLabel}Pronouns`);
+    const bottomNameInput = document.getElementById(`bottom${teamLabel}Name`);
+    const bottomPronounsInput = document.getElementById(`bottom${teamLabel}Pronouns`);
+    const inColorInput = document.getElementById(`${isLeft ? "left" : "right"}InColor`);
+    const outColorInput = document.getElementById(`${isLeft ? "left" : "right"}OutColor`);
+
+    if (teamNameInput) teamNameInput.value = teamInfo.name || teamKey;
+    if (topNameInput) topNameInput.value = teamInfo.members?.[0]?.name || "";
+    if (topPronounsInput) topPronounsInput.value = teamInfo.members?.[0]?.pronouns || "";
+    if (bottomNameInput) bottomNameInput.value = teamInfo.members?.[1]?.name || "";
+    if (bottomPronounsInput) bottomPronounsInput.value = teamInfo.members?.[1]?.pronouns || "";
+    if (inColorInput) inColorInput.value = teamInfo.inputColor || teamInfo.bingosyncColor || "";
+    if (outColorInput) outColorInput.value = teamInfo.displayColor || teamInfo.outputColor || "";
+
+    saveTeamInfo(teamLabel);
+}
+
 window.addEventListener('load', () => {
+    populateTeamDropdowns();
     const savedData = JSON.parse(localStorage.getItem('teamDataSave'));
     if (savedData) {
         if (savedData["LeftTeam"]) {
@@ -50,6 +133,12 @@ window.addEventListener('load', () => {
             document.getElementById("rightMultiLink").value = savedData["RightTeam"]["multiLink"] || "";
         }
     }
+    document.getElementById("leftTeamSelect").addEventListener("change", (event) => {
+        applyTeamPreset("left", event.target.value);
+    });
+    document.getElementById("rightTeamSelect").addEventListener("change", (event) => {
+        applyTeamPreset("right", event.target.value);
+    });
     document.getElementById("commentator1").addEventListener('input', (event) => {
         sendToServer("commentator_names", {"comm1": document.getElementById("commentator1").value,
                                            "comm2": document.getElementById("commentator2").value});
@@ -115,7 +204,7 @@ function launchClient() {
 function launchGameReader() {
     console.log("Launching Game Reader...");
     nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("leftMultiLink").value});
-    nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
+    // nodecg.sendMessage('launch-game-reader', {"id": document.getElementById("rightMultiLink").value});
 }
 
 function launchKevingo(kevingoWSName) {
@@ -155,8 +244,9 @@ function setLightDark(elementName, lightColor = "#FFFFFF", darkColor = "#000000"
     return textColor;
 }
 
-function saveTeamInfo() {
-    ["Left", "Right"].forEach(team => {
+function saveTeamInfo(teamLabel = null) {
+    const teamLabels = teamLabel ? [teamLabel] : ["Left", "Right"];
+    teamLabels.forEach(team => {
         const teamData = {
             name: document.getElementById(`${team.toLowerCase()}TeamName`).value,
             player1: {
@@ -180,3 +270,13 @@ function saveTeamInfo() {
 
 document.getElementById("saveLeftTeam").addEventListener("click", () => saveTeamInfo("Left"));
 document.getElementById("saveRightTeam").addEventListener("click", () => saveTeamInfo("Right"));
+
+const teamDict = {  "Peam Tame Nending": {"name": "Peam Tame Nending", "members": [playerDict["nago"], playerDict["flashy"]], "inputColor": "red", "displayColor": "#C42615", "acronym": "PTN"},
+                    "Nyarsonists": {"name": "Nyarsonists", "members": [playerDict["nae"], playerDict["koren"]], "inputColor": "green", "displayColor": "#1C890C", "acronym": "NYA"},
+                    "Generation zzz": {"name": "Generation zzz", "members": [playerDict["Kevin"], playerDict["shovelclaws"]], "inputColor": "blue", "displayColor": "#032595", "acronym": "GENZ"},
+                    "Night Ninjas": {"name": "Night Ninjas", "members": [playerDict["jon"], playerDict["SyiLenSa"]], "inputColor": "purple", "displayColor": "#B831E3", "acronym": "NIN"},
+                    "F.C.P.R.E.M.I.X.": {"name": "F.C.P.R.E.M.I.X.", "members": [playerDict["vaen"], playerDict["dynamight"]], "inputColor": "blue", "displayColor": "#8FAFFF", "acronym": "FCP"},
+                    "Cook or be Cooked": {"name": "Cook or be Cooked", "members": [playerDict["Miku_ds"], playerDict["Fatalr0ck"]], "inputColor": "blue", "displayColor": "#EE872B", "acronym": "COOK"},
+                    "no bun intended": {"name": "no bun intended", "members": [playerDict["yomsa"], playerDict["LaurieDBunnykins"]], "inputColor": "pink", "displayColor": "#FDA3CB", "acronym": "BUN"},
+                    "0xSWARM": {"name": "0xSWARM", "members": [playerDict["7thAce"], playerDict["bee"]], "inputColor": "green", "displayColor": "#EFE925", "acronym": "0XS"},
+                };

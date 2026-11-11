@@ -115,7 +115,10 @@ div {
 }
 
 .infoBox {
+    position: absolute;
     display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: bold;
     font-size: 40px;
     width: 126px;
@@ -123,6 +126,14 @@ div {
     -webkit-text-stroke-width: 1.5px;
     -webkit-text-stroke-color: black;
 }
+
+.infoBox .timerDigit {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 
 .strokeMain {
     color: white;
@@ -136,6 +147,14 @@ div {
     left: 1260px;
     top: 880px;
     font-size: 60px;
+}
+
+.timerDigit {
+    width: 48px;
+}
+
+#gameTimeColon {
+    width: 10px;
 }
 
 #pointsToWin {
@@ -356,3 +375,8 @@ div {
     font-style: italic;
     color: #BBB;
 }
+
+.HUD {
+    visibility: hidden;
+}
+

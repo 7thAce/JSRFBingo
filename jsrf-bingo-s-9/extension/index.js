@@ -1013,6 +1013,7 @@ class Team {
     maxScore = 0;
     bingoCount = 0;
     graffitiProgress = {};
+    automarker = null;
     
 
     constructor(id) {

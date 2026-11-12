@@ -1,1 +1,1 @@
-Use double quotes for all strings when possible.
+Use double quotes for all strings when possible
